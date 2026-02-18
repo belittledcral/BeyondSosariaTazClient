@@ -1,0 +1,61 @@
+name: Build-Test
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+    paths-ignore:
+      - '**/build-release.yml'
+      - 'appveyor.yml'
+      - '**/README.md'
+  pull_request:
+    branches:
+      - dev
+    paths-ignore:
+      - '**/build-release.yml'
+      - 'appveyor.yml'
+      - '**/README.md'
+
+env:
+  DOTNET_NOLOGO: false
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  NUGET_XMLDOC_MODE: skip
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+       os: [ windows-latest ]
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.ref }}
+
+    - name: Get submodules
+      run: |
+        git config --global url."https://".insteadOf git://
+        git submodule update --init --recursive
+
+    - name: Setup .NET 10
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: 10
+
+    - name: Restore
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build -c Release
+
+    - name: Test
+      run: dotnet test --verbosity normal tests/ClassicUO.UnitTests
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-output
+        path: '**/bin/Release/**/*'
