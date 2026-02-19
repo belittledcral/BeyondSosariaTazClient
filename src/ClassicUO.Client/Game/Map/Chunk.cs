@@ -33,6 +33,8 @@ namespace ClassicUO.Game.Map
         }
 
         public GameObject[,] Tiles { get; } = new GameObject[8, 8];
+        // Z values cached from file at load time so GetTileZ can avoid locked file reads
+        public readonly sbyte[] TileZ = new sbyte[64];
         public bool IsDestroyed;
         public volatile bool IsLoading;
         public long LastAccessTime;
@@ -96,6 +98,7 @@ namespace ClassicUO.Game.Map
                         ushort tileID = (ushort)(cells[pos].TileID & 0x3FFF);
 
                         sbyte z = cells[pos].Z;
+                        TileZ[pos] = z;
 
                         var land = Land.Create(_world, tileID);
 

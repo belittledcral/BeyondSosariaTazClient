@@ -29,6 +29,8 @@ namespace ClassicUO.Game.Map
         private readonly World _world;
         private static readonly HashSet<int> _pendingBlocks = new();
         private static readonly ConcurrentQueue<(int block, Chunk chunk)> _loadedChunksQueue = new();
+        // Limit concurrent async chunk loads to avoid I/O thrashing (profiler showed 43 simultaneous)
+        private static readonly SemaphoreSlim _asyncChunkSemaphore = new SemaphoreSlim(8, 8);
         internal static readonly object MapFileIOLock = new object();
 
         // Map PNG generation for web map and caching
@@ -207,8 +209,9 @@ namespace ClassicUO.Game.Map
 
         private Task AsyncGetChunk(int chunkX, int chunkY, int block)
         {
-            var task = Task.Run(() =>
+            return Task.Run(async () =>
             {
+                await _asyncChunkSemaphore.WaitAsync();
                 try
                 {
                     // Create a new chunk completely independently
@@ -220,15 +223,13 @@ namespace ClassicUO.Game.Map
                 }
                 finally
                 {
-                    // Remove from pending blocks
+                    _asyncChunkSemaphore.Release();
                     lock (_pendingBlocks)
                     {
                         _pendingBlocks.Remove(block);
                     }
                 }
             });
-
-            return task;
         }
 
         public GameObject GetTile(int x, int y, bool load = true) => GetChunk(x, y, load)?.GetHeadObject(x % 8, y % 8);
@@ -240,7 +241,20 @@ namespace ClassicUO.Game.Map
                 return -125;
             }
 
-            ref IndexMap blockIndex = ref GetIndex(x >> 3, y >> 3);
+            int chunkX = x >> 3;
+            int chunkY = y >> 3;
+
+            // Fast path: if the chunk is loaded, read Z from its cached array (no lock, no file I/O)
+            int block = GetBlock(chunkX, chunkY);
+            if (block < BlocksCount && block < _terrainChunks.Length)
+            {
+                Chunk chunk = _terrainChunks[block];
+                if (chunk != null && !chunk.IsLoading && !chunk.IsDestroyed)
+                    return chunk.TileZ[(y % 8 << 3) + x % 8];
+            }
+
+            // Slow path: chunk not loaded, fall back to direct file read
+            ref IndexMap blockIndex = ref GetIndex(chunkX, chunkY);
 
             if (!blockIndex.IsValid())
             {

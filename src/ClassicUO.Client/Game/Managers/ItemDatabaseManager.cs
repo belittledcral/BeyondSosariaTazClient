@@ -361,6 +361,10 @@ namespace ClassicUO.Game.Managers
             {
                 using SqliteConnection connection = GetOpenConnection();
 
+                // Enable WAL mode for faster writes (avoids full-file locking on each commit)
+                using (var pragmaCmd = new SqliteCommand("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;", connection))
+                    pragmaCmd.ExecuteNonQuery();
+
                 string createTableQuery = """
                                               CREATE TABLE IF NOT EXISTS Items (
                                                   Serial INTEGER PRIMARY KEY,

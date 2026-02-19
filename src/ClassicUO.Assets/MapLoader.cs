@@ -66,6 +66,9 @@ namespace ClassicUO.Assets
         protected FileReader[] _currentMapFiles;
         protected FileReader[] _currentStaticsFiles, _currentIdxStaticsFiles;
 
+        // Cached result for SanitizeMapIndex to avoid repeated file-length syscalls on every tile lookup
+        private bool _sanitizeMap1ToMap0;
+
         public FileReader GetMapFile(int map) => map < _currentMapFiles.Length ? _currentMapFiles[map] : null;
 
         public FileReader GetStaticFile(int map) => map < _currentStaticsFiles.Length ? _currentStaticsFiles[map] : null;
@@ -247,6 +250,8 @@ namespace ClassicUO.Assets
             _filesMap.CopyTo(_currentMapFiles, 0);
             _filesIdxStatics.CopyTo(_currentIdxStaticsFiles, 0);
             _filesStatics.CopyTo(_currentStaticsFiles, 0);
+
+            UpdateSanitizeMap1Cache();
         }
 
         public unsafe void LoadMap(int i, bool useXFiles = false)
@@ -377,6 +382,9 @@ namespace ClassicUO.Assets
                 // TODO: UOLive needs hashes! we need to find out a better solution, but keep 'em for the moment
                 //((UOFileUop)file)?.ClearHashes();
             }
+
+            if (i == 1)
+                UpdateSanitizeMap1Cache();
         }
 
         public void PatchMapBlock(UOFile file, ulong block, ulong address)
@@ -590,11 +598,16 @@ namespace ClassicUO.Assets
 
         public void SanitizeMapIndex(ref int map)
         {
-            if (map == 1 && (_currentMapFiles[1] == null || _currentMapFiles[1].Length == 0 || _currentStaticsFiles[1] == null ||
-                _currentStaticsFiles[1].Length == 0 || _currentIdxStaticsFiles[1] == null || _currentIdxStaticsFiles[1].Length == 0))
-            {
+            if (map == 1 && _sanitizeMap1ToMap0)
                 map = 0;
-            }
+        }
+
+        private void UpdateSanitizeMap1Cache()
+        {
+            _sanitizeMap1ToMap0 = _currentMapFiles.Length > 1 &&
+                (_currentMapFiles[1] == null || _currentMapFiles[1].Length == 0 ||
+                 _currentStaticsFiles[1] == null || _currentStaticsFiles[1].Length == 0 ||
+                 _currentIdxStaticsFiles[1] == null || _currentIdxStaticsFiles[1].Length == 0);
         }
 
 
