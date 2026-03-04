@@ -130,6 +130,8 @@ namespace ClassicUO.Game
             }
         }
 
+        public Managers.WorldDataManager WorldDataManager { get; private set; }
+
         public byte ClientViewRange { get; set; } = Constants.MAX_VIEW_RANGE;
 
         public bool SkillsRequested { get; set; }
@@ -184,6 +186,7 @@ namespace ClassicUO.Game
 
                         Client.Game.UO.FileManager.Maps.LoadMap(value, ClientFeatures.Flags.HasFlag(CharacterListFlags.CLF_UNLOCK_FELUCCA_AREAS));
                         Map = new Map.Map(this, value);
+                        WorldDataManager = new Managers.WorldDataManager(this, Client.Game.UO.FileManager.Maps.MapBlocksSize[value, 1], WorldPersistenceMode.Buffer);
 
                         Player.SetInWorldTile(x, y, z);
                         Player.ClearSteps();
@@ -192,6 +195,7 @@ namespace ClassicUO.Game
                     {
                         Client.Game.UO.FileManager.Maps.LoadMap(value, ClientFeatures.Flags.HasFlag(CharacterListFlags.CLF_UNLOCK_FELUCCA_AREAS));
                         Map = new Map.Map(this, value);
+                        WorldDataManager = new Managers.WorldDataManager(this, Client.Game.UO.FileManager.Maps.MapBlocksSize[value, 1], WorldPersistenceMode.Buffer);
                     }
 
                     // force cursor update when switching map

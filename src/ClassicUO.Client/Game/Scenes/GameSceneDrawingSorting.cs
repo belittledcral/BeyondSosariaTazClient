@@ -1210,6 +1210,9 @@ namespace ClassicUO.Game.Scenes
             _last_scaled_offset.X = winGameScaledOffsetX;
             _last_scaled_offset.Y = winGameScaledOffsetY;
 
+            _world.WorldDataManager?.UpdateViewBounds(
+                _minTile.X, _minTile.Y, _maxTile.X, _maxTile.Y);
+
             UpdateMaxDrawZ();
         }
 

@@ -64,6 +64,29 @@ namespace ClassicUO.Game.Map
 
             try
             {
+                // Check in-memory world data store before touching any files
+                var wdm = _world.WorldDataManager;
+                if (wdm != null)
+                {
+                    if (wdm.Store.TryGet(X, Y, out WorldChunkData serverData))
+                    {
+                        LoadFromWorldStore(serverData);
+                        return;
+                    }
+
+                    if (wdm.Mode == WorldPersistenceMode.FileBacked)
+                    {
+                        var cached = wdm.Store.GetOrCreate(X, Y);
+                        if (wdm.Persistence.TryLoadChunk(X, Y, cached))
+                        {
+                            LoadFromWorldStore(cached);
+                            return;
+                        }
+                        // No disk data — remove the empty slot so fallback proceeds cleanly
+                        wdm.Store.Clear(X, Y);
+                    }
+                }
+
                 Map map = _world.Map;
 
                 ref IndexMap im = ref GetIndex(index);
@@ -470,6 +493,111 @@ namespace ClassicUO.Game.Map
             obj.TNext = null;
         }
 
+
+        private void LoadFromWorldStore(WorldChunkData data)
+        {
+            Map map = _world.Map;
+            int bx = X << 3;
+            int by = Y << 3;
+
+            HuesLoader huesLoader = Client.Game.UO.FileManager.Hues;
+            uint[] bufferBlock = new uint[64];
+            sbyte[] bufferBlockZ = new sbyte[64];
+
+            for (int y = 0; y < 8; ++y)
+            {
+                int pos = y << 3;
+                ushort tileY = (ushort)(by + y);
+
+                for (int x = 0; x < 8; ++x, ++pos)
+                {
+                    ushort tileID = data.LandGraphics[pos];
+                    sbyte z = data.LandZ[pos];
+                    TileZ[pos] = z;
+
+                    var land = Land.Create(_world, tileID);
+                    ushort tileX = (ushort)(bx + x);
+
+                    land.ApplyStretch(map, tileX, tileY, z);
+                    land.X = tileX;
+                    land.Y = tileY;
+                    land.Z = z;
+                    land.UpdateScreenPosition();
+
+                    if (TileMarkerManager.Instance.IsTileMarked(land.X, land.Y, map.Index, out ushort landHue))
+                        land.Hue = landHue;
+
+                    AddGameObject(land, x, y);
+
+                    ushort color = (ushort)(0x8000 | huesLoader.GetRadarColorData(tileID & 0x3FFF));
+                    bufferBlock[pos] = HuesHelper.Color16To32(color) | 0xFF_00_00_00;
+                    bufferBlockZ[pos] = z;
+                }
+            }
+
+            foreach (ServerStaticEntry s in data.Statics)
+            {
+                if (s.LocalX >= 8 || s.LocalY >= 8) continue;
+                int pos = (s.LocalY << 3) + s.LocalX;
+
+                var staticObj = Static.Create(_world, s.Graphic, s.Hue, pos);
+                staticObj.X = (ushort)(bx + s.LocalX);
+                staticObj.Y = (ushort)(by + s.LocalY);
+                staticObj.Z = s.Z;
+                staticObj.UpdateScreenPosition();
+
+                if (TileMarkerManager.Instance.IsTileMarked(staticObj.X, staticObj.Y, map.Index, out ushort staticHue))
+                    staticObj.Hue = staticHue;
+
+                AddGameObject(staticObj, s.LocalX, s.LocalY);
+
+                int blockIndex = (s.LocalY << 3) + s.LocalX;
+                if (GameObject.CanBeDrawn(_world, s.Graphic) && s.Z >= bufferBlockZ[blockIndex])
+                {
+                    ushort color = (ushort)(0x8000 | (s.Hue != 0
+                        ? huesLoader.GetColor16(16384, s.Hue)
+                        : huesLoader.GetRadarColorData(s.Graphic + 0x4000)));
+                    bufferBlock[blockIndex] = HuesHelper.Color16To32(color) | 0xFF_00_00_00;
+                    bufferBlockZ[blockIndex] = s.Z;
+                }
+            }
+
+            const float MAG_0 = 80f / 100f;
+            const float MAG_1 = 100f / 80f;
+
+            for (int sy = 0; sy < 7; ++sy)
+            {
+                for (int sx = 0; sx < 8; ++sx)
+                {
+                    int cur  = sy * 8 + sx;
+                    int next = (sy + 1) * 8 + sx;
+                    sbyte z0 = bufferBlockZ[cur];
+                    sbyte z1 = bufferBlockZ[next];
+
+                    if (z0 == z1) continue;
+
+                    ref uint cc = ref bufferBlock[cur];
+
+                    if (cc == 0) continue;
+
+                    byte r = (byte)(cc & 0xFF);
+                    byte g = (byte)((cc >> 8) & 0xFF);
+                    byte b = (byte)((cc >> 16) & 0xFF);
+                    byte a = (byte)((cc >> 24) & 0xFF);
+
+                    if (r != 0 || g != 0 || b != 0)
+                    {
+                        float mag = z0 < z1 ? MAG_0 : MAG_1;
+                        r = (byte)Math.Min(0xFF, r * mag);
+                        g = (byte)Math.Min(0xFF, g * mag);
+                        b = (byte)Math.Min(0xFF, b * mag);
+                        cc = (uint)(r | (g << 8) | (b << 16) | (a << 24));
+                    }
+                }
+            }
+
+            UIManager.GetGump<WorldMapGump>()?.UpdateWorldMapChunk(X, Y, bufferBlock);
+        }
 
         public void Destroy()
         {
