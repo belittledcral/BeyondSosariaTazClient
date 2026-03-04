@@ -393,7 +393,7 @@ namespace ClassicUO.Game
                 }
 
                 Profiler.EnterContext("MobilesUpdate");
-                foreach (Mobile mob in Mobiles.Values)
+                foreach (Mobile mob in Mobiles.Values.ToList())
                 {
                     mob.Update();
 
@@ -449,7 +449,7 @@ namespace ClassicUO.Game
                 }
 
                 Profiler.EnterContext("ItemsUpdate");
-                foreach (Item item in Items.Values)
+                foreach (Item item in Items.Values.ToList())
                 {
                     item.Update();
 

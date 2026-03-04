@@ -5,6 +5,7 @@ using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
+using System.Linq;
 
 namespace ClassicUO.Game.Managers
 {
@@ -79,7 +80,7 @@ namespace ClassicUO.Game.Managers
             Renderer.Animations.Animations animations = Client.Game.UO.Animations;
             bool isEnabled = IsEnabled;
 
-            foreach (Mobile mobile in _world.Mobiles.Values)
+            foreach (Mobile mobile in _world.Mobiles.Values.ToList())
             {
                 if (mobile.IsDestroyed || mobile.Distance > _world.ClientViewRange)
                 {

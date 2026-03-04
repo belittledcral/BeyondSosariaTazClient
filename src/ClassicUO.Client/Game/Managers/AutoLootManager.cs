@@ -5,6 +5,7 @@ using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -246,7 +247,7 @@ namespace ClassicUO.Game.Managers
             if (ProfileManager.CurrentProfile.EnableScavenger && Time.Ticks >= _nextScavengerScan)
             {
                 _nextScavengerScan = Time.Ticks + 500;
-                foreach (Item item in _world.Items.Values)
+                foreach (Item item in _world.Items.Values.ToList())
                     if (item != null && item.OnGround && !item.IsLocked && !item.IsCorpse && item.Distance < 3)
                         CheckAndLoot(item);
             }

@@ -107,8 +107,9 @@ namespace ClassicUO.Game.Scenes
                 int pz14 = playerZ + 14;
                 int pz16 = playerZ + 16;
 
-                for (GameObject obj = chunk.GetHeadObject(x, y); obj != null; obj = obj.TNext)
+                for (GameObject obj = chunk.GetHeadObject(x, y), _tnext = null; obj != null; obj = _tnext)
                 {
+                    _tnext = obj.TNext;
                     sbyte tileZ = obj.Z;
 
                     if (obj is Land l)
@@ -170,11 +171,12 @@ namespace ClassicUO.Game.Scenes
                     y = playerY % 8;
 
                     for (
-                        GameObject obj2 = chunk.GetHeadObject(x, y);
+                        GameObject obj2 = chunk.GetHeadObject(x, y), _tnext2 = null;
                         obj2 != null;
-                        obj2 = obj2.TNext
+                        obj2 = _tnext2
                     )
                     {
+                        _tnext2 = obj2.TNext;
                         //if (obj is Item it && !it.ItemData.IsRoof || !(obj is Static) && !(obj is Multi))
                         //    continue;
 
@@ -263,8 +265,9 @@ namespace ClassicUO.Game.Scenes
 
             if (tile != null)
             {
-                for (GameObject obj = tile; obj != null; obj = obj.TNext)
+                for (GameObject obj = tile, _tnext3 = null; obj != null; obj = _tnext3)
                 {
+                    _tnext3 = obj.TNext;
                     ushort testGraphic = obj.Graphic;
 
                     if (testGraphic == graphic && obj.Z == z)
@@ -674,8 +677,9 @@ namespace ClassicUO.Game.Scenes
         {
             Profile profile = ProfileManager.CurrentProfile;
 
-            for (; obj != null; obj = obj.TNext)
+            for (GameObject _tnext4 = obj; obj != null; obj = _tnext4)
             {
+                _tnext4 = obj.TNext;
                 if (UpdateDrawPosition || obj.IsPositionChanged)
                 {
                     obj.UpdateRealScreenPosition(_offset.X, _offset.Y);

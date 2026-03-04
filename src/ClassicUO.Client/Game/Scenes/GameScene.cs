@@ -1368,6 +1368,11 @@ namespace ClassicUO.Game.Scenes
                     Profiler.ExitContext("Calculate depth");
 
                     Profiler.EnterContext("Draw");
+                    if (obj == null || obj.IsDestroyed)
+                    {
+                        Profiler.ExitContext("Draw");
+                        continue;
+                    }
                     if (
                         obj.Draw(batcher, obj.RealScreenPosition.X, obj.RealScreenPosition.Y, depth)
                     )

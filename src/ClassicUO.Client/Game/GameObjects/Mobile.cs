@@ -636,7 +636,7 @@ namespace ClassicUO.Game.GameObjects
                             }
                             else
                             {
-                                frameIndex = (byte)(frames.Length - 1);
+                                frameIndex = frames.Length - 1;
                             }
                         }
                         else

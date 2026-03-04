@@ -517,7 +517,7 @@ namespace ClassicUO.Game.GameObjects
 
             if (LastAnimationChangeTime < Time.Ticks)
             {
-                byte frameIndex = (byte)(AnimIndex + (ExecuteAnimation ? 1 : 0));
+                int frameIndex = AnimIndex + (ExecuteAnimation ? 1 : 0);
                 ushort id = GetGraphicForAnimation();
 
                 bool mirror = false;
@@ -550,7 +550,7 @@ namespace ClassicUO.Game.GameObjects
                         // when the animation is done, stop to animate the corpse
                         if (frameIndex >= frames.Length)
                         {
-                            frameIndex = (byte)(frames.Length - 1);
+                            frameIndex = frames.Length - 1;
                         }
 
                         AnimIndex = (byte)(frameIndex % frames.Length);
