@@ -95,6 +95,8 @@ namespace ClassicUO.Game.Scenes
             SDL.SDL_SetWindowMinimumSize(Client.Game.Window.Handle, 640, 480);
 
             Camera.Zoom = ProfileManager.CurrentProfile.DefaultScale;
+            Client.Game.SetScale(ProfileManager.CurrentProfile.RenderScale);
+            _world.ClientViewRange = ProfileManager.CurrentProfile.ViewRange;
             Camera.Bounds.X = Math.Max(0, ProfileManager.CurrentProfile.GameWindowPosition.X);
             Camera.Bounds.Y = Math.Max(0, ProfileManager.CurrentProfile.GameWindowPosition.Y);
             Camera.Bounds.Width = Math.Max(640, ProfileManager.CurrentProfile.GameWindowSize.X);

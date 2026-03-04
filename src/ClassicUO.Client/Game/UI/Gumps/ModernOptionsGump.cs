@@ -1128,6 +1128,40 @@ namespace ClassicUO.Game.UI.Gumps
 
             #endregion
 
+            #region Performance
+
+            page = ((int)PAGE.Video + 1005);
+            content.AddToLeft(SubCategoryButton(lang.ButtonPerformance, page, content.LeftWidth));
+            content.ResetRightSide();
+
+            content.AddToRight(
+                new SliderWithLabel(
+                    lang.GetVideo.RenderScale, 0, ThemeSettings.SLIDER_WIDTH,
+                    25, 100, (int)(profile.RenderScale * 100),
+                    (r) =>
+                    {
+                        profile.RenderScale = r / 100f;
+                        Client.Game.SetScale(profile.RenderScale);
+                    }
+                ), true, page
+            );
+
+            content.BlankLine();
+
+            content.AddToRight(
+                new SliderWithLabel(
+                    lang.GetVideo.ViewRange, 0, ThemeSettings.SLIDER_WIDTH,
+                    Constants.MIN_VIEW_RANGE, Constants.MAX_VIEW_RANGE, profile.ViewRange,
+                    (r) =>
+                    {
+                        profile.ViewRange = (byte)r;
+                        World.ClientViewRange = (byte)r;
+                    }
+                ), true, page
+            );
+
+            #endregion
+
             options.Add(new SettingsOption("", content, MainContent.RightWidth, (int)PAGE.Video));
         }
 

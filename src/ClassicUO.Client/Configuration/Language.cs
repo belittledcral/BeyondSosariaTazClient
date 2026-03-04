@@ -85,6 +85,7 @@ namespace ClassicUO.Configuration
         public string ButtonZoom { get; set; } = "Zoom";
         public string ButtonLighting { get; set; } = "Lighting";
         public string ButtonShadows { get; set; } = "Shadows";
+        public string ButtonPerformance { get; set; } = "Performance";
 
         public General GetGeneral { get; set; } = new General();
         public Video GetVideo { get; set; } = new Video();
@@ -282,6 +283,13 @@ namespace ClassicUO.Configuration
             public string EnableShadows { get; set; } = "Enable shadows";
             public string RockTreeShadows { get; set; } = "Rock and tree shadows";
             public string TerrainShadowLevel { get; set; } = "Terrain shadow level";
+            #endregion
+
+            #region Performance
+            public string RenderScale { get; set; } = "Render scale (%)";
+            public string RenderScaleTooltip { get; set; } = "Reduces rendering resolution. Lower = better performance, blurrier image.";
+            public string ViewRange { get; set; } = "View range";
+            public string ViewRangeTooltip { get; set; } = "Limits how many tiles are drawn. Lower = better performance, smaller visible area.";
             #endregion
         }
 

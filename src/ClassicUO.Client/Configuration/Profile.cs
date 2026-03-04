@@ -131,6 +131,8 @@ namespace ClassicUO.Configuration
         public float DefaultScale { get; set; } = 1.0f;
         public bool EnableMousewheelScaleZoom { get; set; }
         public bool RestoreScaleAfterUnpressCtrl { get; set; }
+        public float RenderScale { get; set; } = 1.0f;
+        public byte ViewRange { get; set; } = 24;
         public bool BandageSelfOld { get; set; } = true;
 
         // Bandage Agent Settings
