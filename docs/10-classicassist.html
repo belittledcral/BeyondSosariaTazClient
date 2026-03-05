@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClassicAssist — Getting Started · TazUO Docs</title>
+  <style>
+    :root {
+      --bg:       #0f1117;
+      --surface:  #181c27;
+      --card:     #1e2233;
+      --border:   #2a3050;
+      --accent:   #4f8ef7;
+      --accent2:  #7c5cfc;
+      --good:     #3ecf8e;
+      --warn:     #f5a623;
+      --bad:      #e05252;
+      --text:     #cdd6f4;
+      --muted:    #7480a0;
+      --code-bg:  #12151f;
+      --code-key: #cba6f7;
+      --code-str: #a6e3a1;
+      --code-num: #fab387;
+      --code-cmt: #585b75;
+      --code-typ: #89dceb;
+      --code-fn:  #89b4fa;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Layout ── */
+    .page { display: flex; min-height: 100vh; }
+    nav {
+      width: 270px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 28px 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    main {
+      flex: 1;
+      padding: 48px 56px;
+      max-width: 1100px;
+    }
+    @media (max-width: 860px) {
+      .page { flex-direction: column; }
+      nav { width: 100%; height: auto; position: static; }
+      main { padding: 28px 20px; }
+    }
+
+    /* ── Nav ── */
+    .nav-logo {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent);
+      padding: 0 24px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .nav-logo .badge {
+      font-size: 0.65rem;
+      background: var(--accent2);
+      color: #fff;
+      padding: 2px 7px;
+      border-radius: 99px;
+      font-weight: 600;
+      letter-spacing: .04em;
+    }
+    .nav-section {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      padding: 20px 24px 6px;
+    }
+    nav ul { list-style: none; }
+    nav ul li a {
+      display: block;
+      padding: 6px 24px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    nav ul li a:hover, nav ul li a.active {
+      color: var(--text);
+      border-left-color: var(--accent);
+      background: rgba(79,142,247,.06);
+      text-decoration: none;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin-bottom: 36px;
+    }
+    h2 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: #e0e6ff;
+      margin: 56px 0 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    h2:first-of-type { border-top: none; margin-top: 0; }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 32px 0 10px;
+    }
+    p { margin-bottom: 14px; }
+    ul, ol { padding-left: 22px; margin-bottom: 14px; }
+    li { margin-bottom: 4px; }
+    strong { color: #e0e6ff; }
+
+    /* ── Callout boxes ── */
+    .callout {
+      border-left: 4px solid;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 18px 0;
+      font-size: 0.94rem;
+    }
+    .callout.info    { border-color: var(--accent);  background: rgba(79,142,247,.08); }
+    .callout.good    { border-color: var(--good);    background: rgba(62,207,142,.08); }
+    .callout.warn    { border-color: var(--warn);    background: rgba(245,166,35,.08); }
+    .callout.danger  { border-color: var(--bad);     background: rgba(224,82,82,.08);  }
+    .callout .label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 4px;
+    }
+    .callout.info   .label { color: var(--accent); }
+    .callout.good   .label { color: var(--good);   }
+    .callout.warn   .label { color: var(--warn);   }
+    .callout.danger .label { color: var(--bad);    }
+
+    /* ── Table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 20px;
+      font-size: 0.9rem;
+    }
+    th {
+      background: var(--card);
+      color: var(--accent);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+    td code, p code, li code {
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.83rem;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      color: var(--code-typ);
+    }
+
+    /* ── Step list ── */
+    .steps { counter-reset: step; list-style: none; padding: 0; margin-bottom: 20px; }
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 16px;
+      margin-bottom: 18px;
+      align-items: flex-start;
+    }
+    .steps li::before {
+      content: counter(step);
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.88rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+    }
+
+    /* ── Comparison cards ── */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 18px 0 24px;
+    }
+    @media (max-width: 700px) { .compare-grid { grid-template-columns: 1fr; } }
+    .compare-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 22px;
+    }
+    .compare-card h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #e0e6ff;
+      margin-bottom: 12px;
+    }
+    .compare-card ul { padding-left: 18px; }
+    .compare-card li { font-size: 0.9rem; color: var(--muted); margin-bottom: 6px; }
+
+    /* ── File pill ── */
+    .file {
+      display: inline-block;
+      background: #1a1f35;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 10px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: var(--code-fn);
+      margin: 2px 2px;
+    }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+<!-- ══════════════════════════ SIDEBAR NAV ══════════════════════════ -->
+<nav>
+  <div class="nav-logo">
+    TazUO Docs <span class="badge">2026</span>
+  </div>
+
+  <div class="nav-section">Index</div>
+  <ul>
+    <li><a href="index.html">Home</a></li>
+  </ul>
+
+  <div class="nav-section">Documents</div>
+  <ul>
+    <li><a href="01-architecture.html">01 Architecture</a></li>
+    <li><a href="02-gameobjects.html">02 Game Objects</a></li>
+    <li><a href="03-network.html">03 Network</a></li>
+    <li><a href="04-rendering.html">04 Rendering</a></li>
+    <li><a href="05-managers-core.html">05 Core Managers</a></li>
+    <li><a href="06-managers-tazuo.html">06 TazUO Managers</a></li>
+    <li><a href="07-ui-controls.html">07 UI Controls</a></li>
+    <li><a href="08-ui-gumps.html">08 UI Gumps</a></li>
+    <li><a href="09-scripting.html">09 Scripting</a></li>
+  </ul>
+
+  <div class="nav-section">Guides</div>
+  <ul>
+    <li><a href="10-classicassist.html" class="active">ClassicAssist</a></li>
+    <li><a href="crash-hardening.html">Crash Hardening</a></li>
+  </ul>
+
+  <div class="nav-section">On this page</div>
+  <ul>
+    <li><a href="#what-is-ca">What is ClassicAssist?</a></li>
+    <li><a href="#enabling">Enabling ClassicAssist</a></li>
+    <li><a href="#re-vs-ca">RE vs ClassicAssist</a></li>
+    <li><a href="#first-steps">First steps</a></li>
+    <li><a href="#running-both">Running both plugins</a></li>
+    <li><a href="#dev-setup">Dev / build setup</a></li>
+    <li><a href="#troubleshooting">Troubleshooting</a></li>
+  </ul>
+</nav>
+
+<!-- ══════════════════════════ MAIN CONTENT ══════════════════════════ -->
+<main>
+
+<h1>ClassicAssist — Getting Started</h1>
+<p class="subtitle">
+  TazUO bundles ClassicAssist alongside RazorEnhanced. This guide explains how to switch to it,
+  what it offers, and how to get automation scripts running quickly.
+</p>
+
+<!-- ─────────────────────── WHAT IS CA ─────────────────────── -->
+<h2 id="what-is-ca">What is ClassicAssist?</h2>
+
+<p>
+  <strong>ClassicAssist</strong> is an open-source UO assistant by <em>Reetus</em> that plugs
+  directly into the ClassicUO plugin API. It provides a full macro/scripting environment, item
+  organiser, dress/undress agent, auto-follow, re-stock, and many other quality-of-life agents —
+  all configured through its own dockable UI window inside the game.
+</p>
+
+<div class="callout info">
+  <div class="label">Bundled, not default</div>
+  <strong>ClassicAssist.dll</strong> is included in <code>Data/Plugins/</code> but is
+  <em>not</em> enabled by default. <code>settings.json</code> keeps
+  <code>"plugins": ["RazorEnhanced.dll"]</code> so existing users are unaffected.
+  You opt in via the in-game Plugins page.
+</div>
+
+<!-- ─────────────────────── ENABLING ─────────────────────── -->
+<h2 id="enabling">Enabling ClassicAssist</h2>
+
+<ol class="steps">
+  <li>
+    <div>
+      <strong>Open Options</strong><br />
+      Press <kbd>Alt+O</kbd> (default keybind) or use the in-game menu to open the Options window.
+    </div>
+  </li>
+  <li>
+    <div>
+      <strong>Navigate to Plugins</strong><br />
+      Click the <em>Plugins</em> tab. You will see a checkbox row for every DLL found in
+      <code>Data/Plugins/</code>.
+    </div>
+  </li>
+  <li>
+    <div>
+      <strong>Check ClassicAssist, uncheck RazorEnhanced (optional)</strong><br />
+      Tick <strong>ClassicAssist.dll</strong>. If you do not need Razor Enhanced, uncheck
+      <strong>RazorEnhanced.dll</strong>. Both can run at the same time — see
+      <a href="#running-both">Running both plugins</a>.
+    </div>
+  </li>
+  <li>
+    <div>
+      <strong>Restart TazUO</strong><br />
+      Plugin load/unload takes effect on the next game launch. Close and reopen TazUO.
+    </div>
+  </li>
+  <li>
+    <div>
+      <strong>Open ClassicAssist</strong><br />
+      After login the ClassicAssist window appears automatically. If it does not, look for its
+      button in the bottom toolbar or type <code>.classicassist</code> in chat.
+    </div>
+  </li>
+</ol>
+
+<div class="callout good">
+  <div class="label">Persisted across sessions</div>
+  Your plugin checkbox choices are saved back to <code>settings.json</code> under the
+  <code>"plugins"</code> array. You only need to do this once per installation.
+</div>
+
+<!-- ─────────────────────── RE VS CA ─────────────────────── -->
+<h2 id="re-vs-ca">RazorEnhanced vs ClassicAssist</h2>
+
+<p>
+  Both assistants implement the same ClassicUO plugin interface and are otherwise independent.
+  Choose the one whose scripting model fits your workflow.
+</p>
+
+<div class="compare-grid">
+  <div class="compare-card">
+    <h4>RazorEnhanced</h4>
+    <ul>
+      <li>Python 3 macros (IronPython)</li>
+      <li>Large existing macro library online</li>
+      <li>Agent-based UI (Dress, Organiser, Scavenger)</li>
+      <li>Familiar to long-time UO players</li>
+      <li>Default enabled in TazUO distributions</li>
+    </ul>
+  </div>
+  <div class="compare-card">
+    <h4>ClassicAssist</h4>
+    <ul>
+      <li>C# / Python macro engine</li>
+      <li>Modern WPF-style dockable UI</li>
+      <li>Built-in item property filter editor</li>
+      <li>Richer agent config (Dress, Restock, Follow, Vendor)</li>
+      <li>Active development &amp; Discord community</li>
+    </ul>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr><th>Feature</th><th>RazorEnhanced</th><th>ClassicAssist</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Scripting language</td><td>Python (IronPython 3)</td><td>Python + C# (IronPython 3 / compiled)</td></tr>
+    <tr><td>Dress agent</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Organiser agent</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Restock agent</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Auto-follow</td><td>Script-only</td><td>Built-in agent</td></tr>
+    <tr><td>Item filter / highlight</td><td>Yes</td><td>Yes (property editor)</td></tr>
+    <tr><td>Vendor buy / sell agent</td><td>Limited</td><td>Yes</td></tr>
+    <tr><td>Map &amp; overhead display</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Config file format</td><td>JSON / XML</td><td>JSON per-profile</td></tr>
+  </tbody>
+</table>
+
+<!-- ─────────────────────── FIRST STEPS ─────────────────────── -->
+<h2 id="first-steps">First Steps in ClassicAssist</h2>
+
+<h3>Macros tab</h3>
+<p>
+  Click <strong>Macros</strong> in the ClassicAssist window. Press <strong>+</strong> to create a
+  new macro. The built-in editor accepts Python 3. A minimal healing macro:
+</p>
+<pre style="background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'Cascadia Code','Fira Code',Consolas,monospace;font-size:0.85rem;line-height:1.7;overflow-x:auto;margin:0 0 14px;color:var(--code-str)">
+<span style="color:var(--code-cmt)"># Heal self when HP drops below 60 %</span>
+<span style="color:var(--code-key)">if</span> Hits() &lt; MaxHits() * <span style="color:var(--code-num)">0.6</span>:
+    UseSkill(<span style="color:var(--code-str)">'Healing'</span>)
+    WaitForTarget(<span style="color:var(--code-num)">3000</span>)
+    Target(<span style="color:var(--code-str)">'self'</span>)
+</pre>
+
+<h3>Agents tab</h3>
+<p>
+  Pre-built agents handle repetitive tasks without scripting. Key agents and how to configure them:
+</p>
+<table>
+  <thead>
+    <tr><th>Agent</th><th>What it does</th><th>How to configure</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Dress</strong></td>
+      <td>Equips a saved outfit (armour, weapons, jewels)</td>
+      <td>Drag items from your paperdoll onto the Dress agent slots → Save</td>
+    </tr>
+    <tr>
+      <td><strong>Organiser</strong></td>
+      <td>Moves items between containers by graphic/hue/name</td>
+      <td>Add item rules → set source/destination serial → Run</td>
+    </tr>
+    <tr>
+      <td><strong>Restock</strong></td>
+      <td>Refills consumables from a bank/chest to your backpack</td>
+      <td>Add items with desired quantity → target source container</td>
+    </tr>
+    <tr>
+      <td><strong>Auto-Follow</strong></td>
+      <td>Automatically follows a named mobile</td>
+      <td>Type target player name → Enable</td>
+    </tr>
+    <tr>
+      <td><strong>Vendor Buy</strong></td>
+      <td>Automatically purchases items from vendor shops</td>
+      <td>Add item rules → open a vendor → agent buys matching items</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Profiles</h3>
+<p>
+  ClassicAssist saves all its settings (macros, agents, hotkeys) into a
+  <strong>profile JSON</strong> stored at:
+</p>
+<p>
+  <span class="file">%AppData%\ClassicAssist\Profiles\&lt;profile-name&gt;.json</span>
+</p>
+<p>
+  You can keep separate profiles per shard or character and switch between them from the
+  ClassicAssist <em>Settings → Profiles</em> menu.
+</p>
+
+<!-- ─────────────────────── RUNNING BOTH ─────────────────────── -->
+<h2 id="running-both">Running Both Plugins Simultaneously</h2>
+
+<p>
+  TazUO loads every DLL listed in <code>settings.json → plugins</code> in order. Both RE and CA
+  can be active at once — they operate independently inside the shared ClassicUO plugin host.
+</p>
+
+<div class="callout warn">
+  <div class="label">Avoid double-automation</div>
+  Running both plugins is fine, but activating the <em>same agent type</em> in both
+  (e.g., two Dress agents or two auto-loot loops) will cause race conditions.
+  Enable each agent in only one plugin at a time.
+</div>
+
+<p>To load both, your <code>settings.json</code> <code>plugins</code> array should read:</p>
+<pre style="background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'Cascadia Code','Fira Code',Consolas,monospace;font-size:0.85rem;line-height:1.7;overflow-x:auto;margin:0 0 14px;color:var(--text)">
+<span style="color:var(--code-str)">"plugins"</span>: [
+  <span style="color:var(--code-str)">"RazorEnhanced.dll"</span>,
+  <span style="color:var(--code-str)">"ClassicAssist.dll"</span>
+]
+</pre>
+<p>
+  This is set automatically when you check both boxes in the Plugins page and restart.
+</p>
+
+<!-- ─────────────────────── DEV SETUP ─────────────────────── -->
+<h2 id="dev-setup">Developer / Build Setup</h2>
+
+<p>
+  The packaging script (<code>package.ps1</code> / <code>package.bat</code>) downloads the latest
+  ClassicAssist release from GitHub automatically. For local development builds:
+</p>
+<ol>
+  <li>Download <code>ClassicAssist.dll</code> from the
+    <a href="https://github.com/ClassicAssist/ClassicAssist/releases/latest">latest ClassicAssist release</a>.</li>
+  <li>Place it at <span class="file">external/classicassist/ClassicAssist.dll</span> in the repo root.</li>
+  <li>Build normally — the <code>CopyExternalDeps_build</code> MSBuild target copies it to
+    <code>$(TargetDir)/Data/Plugins/</code> on every build.</li>
+</ol>
+
+<div class="callout info">
+  <div class="label">Conditional copy</div>
+  The <code>.csproj</code> ItemGroup for <code>DataFiles_classicassist</code> has a
+  <code>Condition="Exists(...)"</code> guard. If the DLL is absent the build succeeds
+  without it — nothing breaks in CI or on a fresh checkout.
+</div>
+
+<table>
+  <thead>
+    <tr><th>Path</th><th>When used</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>external/classicassist/ClassicAssist.dll</code></td>
+      <td>Dev builds — dropped manually; copied by MSBuild</td>
+    </tr>
+    <tr>
+      <td><code>Data/Plugins/ClassicAssist.dll</code> (in dist ZIP)</td>
+      <td>End-user distributions built by <code>package.ps1</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ─────────────────────── TROUBLESHOOTING ─────────────────────── -->
+<h2 id="troubleshooting">Troubleshooting</h2>
+
+<table>
+  <thead>
+    <tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>ClassicAssist window never appears after login</td>
+      <td>DLL not checked in Plugins page, or not in <code>Data/Plugins/</code></td>
+      <td>Verify <code>Data/Plugins/ClassicAssist.dll</code> exists; check the Plugins page and restart</td>
+    </tr>
+    <tr>
+      <td>Game crashes on startup after enabling CA</td>
+      <td>ClassicAssist DLL is built for a different .NET target than TazUO</td>
+      <td>Ensure you downloaded the release build, not a debug/dev artifact; re-run <code>package.ps1</code></td>
+    </tr>
+    <tr>
+      <td><code>package.ps1</code> prints "No ClassicAssist release ZIP found"</td>
+      <td>GitHub API rate limit or release asset naming changed</td>
+      <td>Re-run after a few minutes; if persistent, check the asset name filter in <code>package.ps1</code> (<code>*ClassicAssist*.zip</code>)</td>
+    </tr>
+    <tr>
+      <td>Macro runs but has no effect</td>
+      <td>Missing <code>Pause()</code> / <code>Wait()</code> between actions</td>
+      <td>Add <code>Pause(500)</code> after actions that send packets; the server throttles rapid input</td>
+    </tr>
+    <tr>
+      <td>Both RE and CA loaded but RE macros stopped working</td>
+      <td>Conflicting hotkey or agent overlap</td>
+      <td>Check for duplicate hotkeys; disable any agent in CA that is also active in RE</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout info">
+  <div class="label">Getting more help</div>
+  The ClassicAssist Discord and GitHub Wiki are the best sources for macro API reference,
+  agent how-tos, and community scripts. The TazUO Discord can help with plugin loading
+  and packaging questions specific to this client.
+</div>
+
+<hr />
+<p style="color: var(--muted); font-size: 0.88rem; text-align: center;">
+  TazUO Developer Docs &mdash; Generated 2026-03-05 &mdash;
+  <a href="https://github.com/PlayTazUO/TazUO">github.com/PlayTazUO/TazUO</a>
+</p>
+
+</main>
+</div>
+</body>
+</html>

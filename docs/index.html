@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TazUO — Developer Documentation</title>
+  <style>
+    :root {
+      --bg:       #0f1117;
+      --surface:  #181c27;
+      --card:     #1e2233;
+      --border:   #2a3050;
+      --accent:   #4f8ef7;
+      --accent2:  #7c5cfc;
+      --good:     #3ecf8e;
+      --warn:     #f5a623;
+      --bad:      #e05252;
+      --text:     #cdd6f4;
+      --muted:    #7480a0;
+      --code-bg:  #12151f;
+      --code-key: #cba6f7;
+      --code-str: #a6e3a1;
+      --code-num: #fab387;
+      --code-cmt: #585b75;
+      --code-typ: #89dceb;
+      --code-fn:  #89b4fa;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Layout ── */
+    .page { display: flex; min-height: 100vh; }
+    nav {
+      width: 270px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 28px 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    main {
+      flex: 1;
+      padding: 48px 56px;
+      max-width: 1100px;
+    }
+    @media (max-width: 860px) {
+      .page { flex-direction: column; }
+      nav { width: 100%; height: auto; position: static; }
+      main { padding: 28px 20px; }
+    }
+
+    /* ── Nav ── */
+    .nav-logo {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent);
+      padding: 0 24px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .nav-logo .badge {
+      font-size: 0.65rem;
+      background: var(--accent2);
+      color: #fff;
+      padding: 2px 7px;
+      border-radius: 99px;
+      font-weight: 600;
+      letter-spacing: .04em;
+    }
+    .nav-section {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      padding: 20px 24px 6px;
+    }
+    nav ul { list-style: none; }
+    nav ul li a {
+      display: block;
+      padding: 6px 24px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    nav ul li a:hover {
+      color: var(--text);
+      border-left-color: var(--accent);
+      background: rgba(79,142,247,.06);
+      text-decoration: none;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin-bottom: 36px;
+    }
+    h2 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: #e0e6ff;
+      margin: 56px 0 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    h2:first-of-type { border-top: none; margin-top: 0; }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 32px 0 10px;
+    }
+    p { margin-bottom: 14px; }
+    ul, ol { padding-left: 22px; margin-bottom: 14px; }
+    li { margin-bottom: 4px; }
+    strong { color: #e0e6ff; }
+
+    /* ── Callout boxes ── */
+    .callout {
+      border-left: 4px solid;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 18px 0;
+      font-size: 0.94rem;
+    }
+    .callout.info    { border-color: var(--accent);  background: rgba(79,142,247,.08); }
+    .callout.good    { border-color: var(--good);    background: rgba(62,207,142,.08); }
+    .callout.warn    { border-color: var(--warn);    background: rgba(245,166,35,.08); }
+    .callout.danger  { border-color: var(--bad);     background: rgba(224,82,82,.08);  }
+    .callout .label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 4px;
+    }
+    .callout.info   .label { color: var(--accent); }
+    .callout.good   .label { color: var(--good);   }
+    .callout.warn   .label { color: var(--warn);   }
+    .callout.danger .label { color: var(--bad);    }
+
+    /* ── Table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 20px;
+      font-size: 0.9rem;
+    }
+    th {
+      background: var(--card);
+      color: var(--accent);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+    td code {
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.83rem;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      color: var(--code-typ);
+    }
+
+    /* ── Doc cards ── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 18px;
+      margin: 24px 0 40px;
+    }
+    .doc-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px 24px;
+      transition: border-color .2s, box-shadow .2s;
+      position: relative;
+    }
+    .doc-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 24px rgba(79,142,247,.12);
+    }
+    .doc-card .doc-num {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .doc-card h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      color: #e0e6ff;
+    }
+    .doc-card p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin: 0 0 16px;
+      line-height: 1.55;
+    }
+    .doc-card a.card-link {
+      display: inline-block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--accent);
+      padding: 5px 0;
+    }
+    .doc-card a.card-link:hover { text-decoration: underline; }
+    .doc-card .tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      background: rgba(79,142,247,.12);
+      color: var(--accent);
+      border-radius: 99px;
+      padding: 2px 9px;
+      margin-bottom: 6px;
+      letter-spacing: .05em;
+    }
+    .doc-card .tag.tazuo { background: rgba(124,92,252,.12); color: var(--accent2); }
+
+    /* ── File pill ── */
+    .file {
+      display: inline-block;
+      background: #1a1f35;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 10px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: var(--code-fn);
+      margin: 2px 2px;
+    }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+<!-- ══════════════════════════ SIDEBAR NAV ══════════════════════════ -->
+<nav>
+  <div class="nav-logo">
+    TazUO Docs <span class="badge">2026</span>
+  </div>
+
+  <div class="nav-section">Index</div>
+  <ul>
+    <li><a href="#overview">Project overview</a></li>
+    <li><a href="#all-docs">All documentation</a></li>
+    <li><a href="#quick-ref">Quick reference</a></li>
+    <li><a href="#key-patterns">Key patterns</a></li>
+  </ul>
+
+  <div class="nav-section">Documents</div>
+  <ul>
+    <li><a href="01-architecture.html">01 Architecture</a></li>
+    <li><a href="02-gameobjects.html">02 Game Objects</a></li>
+    <li><a href="03-network.html">03 Network</a></li>
+    <li><a href="04-rendering.html">04 Rendering</a></li>
+    <li><a href="05-managers-core.html">05 Core Managers</a></li>
+    <li><a href="06-managers-tazuo.html">06 TazUO Managers</a></li>
+    <li><a href="07-ui-controls.html">07 UI Controls</a></li>
+    <li><a href="08-ui-gumps.html">08 UI Gumps</a></li>
+    <li><a href="09-scripting.html">09 Scripting</a></li>
+  </ul>
+
+  <div class="nav-section">Guides</div>
+  <ul>
+    <li><a href="10-classicassist.html">ClassicAssist</a></li>
+    <li><a href="crash-hardening.html">Crash Hardening</a></li>
+  </ul>
+</nav>
+
+<!-- ══════════════════════════ MAIN CONTENT ══════════════════════════ -->
+<main>
+
+<h1>TazUO Developer Documentation</h1>
+<p class="subtitle">
+  Comprehensive technical reference for the TazUO game client — a feature-rich fork of ClassicUO,
+  the open-source Ultima Online classic client written in C# / .NET 10.
+</p>
+
+<!-- ─────────────────────── PROJECT OVERVIEW ─────────────────────── -->
+<h2 id="overview">Project Overview</h2>
+
+<p>
+  <strong>TazUO</strong> is a fork of <a href="https://github.com/andreakarasho/ClassicUO">ClassicUO</a>
+  that adds quality-of-life features, a Python scripting engine, grid-based inventory management,
+  modern UI overlays via ImGui, and deep customisation options requested by the community.
+  The codebase is approximately <strong>86,000 lines of C#</strong> across 579 source files,
+  organised into five projects within a single Visual Studio solution.
+</p>
+
+<table>
+  <thead>
+    <tr><th>Project</th><th>Role</th><th>Key namespace</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>ClassicUO.Client</code></td><td>Main executable — game logic, UI, network, scripting</td><td><code>ClassicUO</code></td></tr>
+    <tr><td><code>ClassicUO.Assets</code></td><td>UO file-format loaders (art, animations, maps, audio)</td><td><code>ClassicUO.Assets</code></td></tr>
+    <tr><td><code>ClassicUO.Renderer</code></td><td>FNA-based rendering engine, sprite batching, textures</td><td><code>ClassicUO.Renderer</code></td></tr>
+    <tr><td><code>ClassicUO.IO</code></td><td>Low-level I/O for UO binary formats</td><td><code>ClassicUO.IO</code></td></tr>
+    <tr><td><code>ClassicUO.Utility</code></td><td>Common helpers, logging, maths</td><td><code>ClassicUO.Utility</code></td></tr>
+  </tbody>
+</table>
+
+<div class="callout info">
+  <div class="label">TazUO vs ClassicUO</div>
+  TazUO selectively merges upstream ClassicUO patches while maintaining its own feature set.
+  If you see code that looks unfamiliar from ClassicUO, check the TazUO-specific managers
+  under <code>Game/Managers/</code> and the <code>LegionScripting/</code> directory first.
+</div>
+
+<!-- ─────────────────────── ALL DOCS ─────────────────────── -->
+<h2 id="all-docs">All Documentation</h2>
+
+<div class="card-grid">
+
+  <div class="doc-card">
+    <div class="doc-num">Doc 01</div>
+    <span class="tag">Core</span>
+    <h3>Architecture &amp; Entry Points</h3>
+    <p>Program startup, the game loop, scene system, profile/config loading, and input handling.
+       Everything you need to understand how TazUO boots and runs.</p>
+    <a class="card-link" href="01-architecture.html">Read doc 01 →</a>
+  </div>
+
+  <div class="doc-card">
+    <div class="doc-num">Doc 02</div>
+    <span class="tag">Core</span>
+    <h3>Game Objects &amp; World State</h3>
+    <p>The GameObject hierarchy (Mobile, Item, Static, Land, Multi), serial numbers, the World
+       container, Map/Chunk spatial organisation, and object lifecycle.</p>
+    <a class="card-link" href="02-gameobjects.html">Read doc 02 →</a>
+  </div>
+
+  <div class="doc-card">
+    <div class="doc-num">Doc 03</div>
+    <span class="tag">Core</span>
+    <h3>Network &amp; Packet System</h3>
+    <p>Connection lifecycle, threading model, packet structure, opcode dispatch, outgoing packet
+       construction, encryption modes, and thread-safety rules.</p>
+    <a class="card-link" href="03-network.html">Read doc 03 →</a>
+  </div>
+
+  <div class="doc-card">
+    <div class="doc-num">Doc 04</div>
+    <span class="tag">Core</span>
+    <h3>Rendering Pipeline</h3>
+    <p>The 4-pass draw pipeline, isometric depth sorting, tile traversal, sprite batching with
+       UltimaBatcher2D, camera maths, and UO asset loading.</p>
+    <a class="card-link" href="04-rendering.html">Read doc 04 →</a>
+  </div>
+
+  <div class="doc-card">
+    <div class="doc-num">Doc 05</div>
+    <span class="tag">Core</span>
+    <h3>Core Managers</h3>
+    <p>TargetManager, PathFinder (A*), MacroManager, SoundManager, JournalManager, PartyManager,
+       CorpseManager, and how managers subscribe to World events.</p>
+    <a class="card-link" href="05-managers-core.html">Read doc 05 →</a>
+  </div>
+
+  <div class="doc-card">
+    <div class="doc-num">Doc 06</div>
+    <span class="tag tazuo">TazUO</span>
+    <h3>TazUO Feature Managers</h3>
+    <p>AutoLootManager, HealthLinesManager, GridHighLightData, DurabilityManager, BuffBarManager,
+       WorldDataManager, NameOverHeadManager — features unique to TazUO.</p>
+    <a class="card-link" href="06-managers-tazuo.html">Read doc 06 →</a>
+  </div>
+
+  <div class="doc-card">
+    <div class="doc-num">Doc 07</div>
+    <span class="tag">UI</span>
+    <h3>UI System: Controls &amp; Architecture</h3>
+    <p>UIManager, the Control base class, Gump base class, standard controls catalog,
+       ImGui coexistence, event wiring, and how to add a new gump.</p>
+    <a class="card-link" href="07-ui-controls.html">Read doc 07 →</a>
+  </div>
+
+  <div class="doc-card">
+    <div class="doc-num">Doc 08</div>
+    <span class="tag">UI</span>
+    <h3>UI Gumps: Key Windows</h3>
+    <p>Deep dives into PaperDoll, Container, GridContainer, HealthBar, Status, Journal, Spellbook,
+       and a full catalog of all 124+ gumps with one-line descriptions.</p>
+    <a class="card-link" href="08-ui-gumps.html">Read doc 08 →</a>
+  </div>
+
+  <div class="doc-card">
+    <div class="doc-num">Doc 09</div>
+    <span class="tag tazuo">TazUO</span>
+    <h3>Scripting System (LegionScripting)</h3>
+    <p>IronPython integration, script execution model, the full PyClass API surface,
+       event hooks, custom gumps from Python, and how to add new API methods.</p>
+    <a class="card-link" href="09-scripting.html">Read doc 09 →</a>
+  </div>
+
+
+  <div class="doc-card">
+    <div class="doc-num">Guide</div>
+    <span class="tag tazuo">TazUO</span>
+    <h3>ClassicAssist — Getting Started</h3>
+    <p>How to enable ClassicAssist, choose between RE and CA, configure agents and macros,
+       and set up dev builds with the conditional DLL copy.</p>
+    <a class="card-link" href="10-classicassist.html">Read guide →</a>
+  </div>
+
+</div>
+
+<!-- ─────────────────────── QUICK REF ─────────────────────── -->
+<h2 id="quick-ref">Quick Reference — Key Files</h2>
+
+<table>
+  <thead>
+    <tr><th>File</th><th>Purpose</th><th>See doc</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>src/ClassicUO.Client/Main.cs</code></td><td>Entry point — Bootstrap.Main(), arg parsing, crash handler</td><td><a href="01-architecture.html">01</a></td></tr>
+    <tr><td><code>src/ClassicUO.Client/Client.cs</code></td><td>Client static facade + UltimaOnline asset container</td><td><a href="01-architecture.html">01</a></td></tr>
+    <tr><td><code>src/ClassicUO.Client/GameController.cs</code></td><td>FNA Game subclass — the game loop (Update/Draw)</td><td><a href="01-architecture.html">01</a></td></tr>
+    <tr><td><code>src/ClassicUO.Client/Game/World.cs</code></td><td>All Mobiles, Items, the Player, map reference</td><td><a href="02-gameobjects.html">02</a></td></tr>
+    <tr><td><code>src/ClassicUO.Client/Network/NetClient.cs</code></td><td>Socket, async read/write loops, packet dispatch</td><td><a href="03-network.html">03</a></td></tr>
+    <tr><td><code>src/ClassicUO.Client/Network/PacketHandlers.cs</code></td><td>Opcode → handler mapping for all server packets</td><td><a href="03-network.html">03</a></td></tr>
+    <tr><td><code>src/ClassicUO.Client/Game/Scenes/GameSceneDrawingSorting.cs</code></td><td>Isometric sort + AddTileToRenderList</td><td><a href="04-rendering.html">04</a></td></tr>
+    <tr><td><code>src/ClassicUO.Renderer/UltimaBatcher2D.cs</code></td><td>Sprite batch — the only path to the GPU</td><td><a href="04-rendering.html">04</a></td></tr>
+    <tr><td><code>src/ClassicUO.Client/Configuration/Profile.cs</code></td><td>Per-character settings (500+ properties, JSON)</td><td><a href="01-architecture.html">01</a></td></tr>
+    <tr><td><code>src/ClassicUO.Client/Game/UI/UIManager.cs</code></td><td>Gump registry, hit-testing, input routing</td><td><a href="07-ui-controls.html">07</a></td></tr>
+    <tr><td><code>src/ClassicUO.Client/LegionScripting/LegionScripting.cs</code></td><td>IronPython runtime init + script management</td><td><a href="09-scripting.html">09</a></td></tr>
+    <tr><td><code>src/ClassicUO.Client/Game/Managers/AutoLootManager.cs</code></td><td>Scavenger / corpse auto-loot system</td><td><a href="06-managers-tazuo.html">06</a></td></tr>
+  </tbody>
+</table>
+
+<!-- ─────────────────────── KEY PATTERNS ─────────────────────── -->
+<h2 id="key-patterns">Key Architectural Patterns</h2>
+
+<table>
+  <thead>
+    <tr><th>Pattern</th><th>Where used</th><th>Why it matters</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Singleton via static class</strong></td>
+      <td><code>Client.Game</code>, <code>World</code>, <code>ProfileManager</code></td>
+      <td>All systems share one instance; thread-safety is the caller's responsibility</td>
+    </tr>
+    <tr>
+      <td><strong>Serial-keyed dictionaries</strong></td>
+      <td><code>World.Mobiles</code>, <code>World.Items</code></td>
+      <td>Every in-game entity has a unique 32-bit serial; use <code>World.Get(serial)</code></td>
+    </tr>
+    <tr>
+      <td><strong>TNext linked list per tile</strong></td>
+      <td>Map/Chunk, render sorting</td>
+      <td>Spatial lookup without allocations; CRITICAL — draw order must follow list order</td>
+    </tr>
+    <tr>
+      <td><strong>Time.Ticks comparisons</strong></td>
+      <td>Every system that throttles updates</td>
+      <td><code>uint</code> millisecond counter; compare with <code>&gt;</code> not <code>==</code></td>
+    </tr>
+    <tr>
+      <td><strong>Profile JSON (snake_case)</strong></td>
+      <td><code>Configuration/Profile.cs</code></td>
+      <td>Each property needs a <code>[JsonSerializable]</code> context or it won't round-trip</td>
+    </tr>
+    <tr>
+      <td><strong>Snapshot before iteration</strong></td>
+      <td>AutoLootManager, HealthLinesManager</td>
+      <td>Call <code>.ToList()</code> or <code>World.GetCorpseSnapshot()</code> before foreach loops</td>
+    </tr>
+    <tr>
+      <td><strong>IsDestroyed guard</strong></td>
+      <td>Rendering, update loops</td>
+      <td>Always check <code>obj.IsDestroyed</code> before accessing any GameObject field</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <div class="label">Important: JSON serialisation</div>
+  TazUO uses <code>System.Text.Json</code> with source-generated contexts. Every new type that
+  needs serialisation must be added to the appropriate <code>JsonSerializerContext</code> subclass.
+  Adding <code>[JsonSerializable(typeof(MyType))]</code> to the context is mandatory — the AOT
+  compiler will not generate reflection-based fallbacks.
+</div>
+
+<hr />
+<p style="color: var(--muted); font-size: 0.88rem; text-align: center;">
+  TazUO Developer Docs &mdash; Generated 2026-03-04 &mdash;
+  <a href="https://github.com/PlayTazUO/TazUO">github.com/PlayTazUO/TazUO</a>
+</p>
+
+</main>
+</div>
+</body>
+</html>

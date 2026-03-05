@@ -86,6 +86,10 @@
     <DataFiles_osx Include="$(ProjectDir)..\..\external\osx\*.*" />
     <DataFiles_osx-arm Include="$(ProjectDir)..\..\external\osx-arm\*.*" />
     <DataFiles_vulkan Include="$(ProjectDir)..\..\external\vulkan\icd.d\*.*" />
+    <DataFiles_razor Include="$(ProjectDir)..\..\external\razor\RazorEnhanced.dll"
+                     Condition="Exists('$(ProjectDir)..\..\external\razor\RazorEnhanced.dll')" />
+    <DataFiles_classicassist Include="$(ProjectDir)..\..\external\classicassist\ClassicAssist.dll"
+                             Condition="Exists('$(ProjectDir)..\..\external\classicassist\ClassicAssist.dll')" />
   </ItemGroup>
 
   <ItemGroup>
@@ -154,6 +158,9 @@
     <Copy SourceFiles="@(DataFiles_osx)" DestinationFolder="$(TargetDir)\osx\" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(DataFiles_osx-arm)" DestinationFolder="$(TargetDir)\osx-arm\" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(DataFiles_vulkan)" DestinationFolder="$(TargetDir)\vulkan\icd.d\" SkipUnchangedFiles="true" />
+    <MakeDir Directories="$(TargetDir)\Data\Plugins\" />
+    <Copy SourceFiles="@(DataFiles_razor)" DestinationFolder="$(TargetDir)\Data\Plugins\" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(DataFiles_classicassist)" DestinationFolder="$(TargetDir)\Data\Plugins\" SkipUnchangedFiles="true" />
   </Target>
 
   <Target Name="CreateVersionFile_publish" AfterTargets="Publish">
@@ -168,6 +175,9 @@
     <Copy SourceFiles="@(DataFiles_osx)" DestinationFolder="$(PublishDir)\osx\" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(DataFiles_vulkan)" DestinationFolder="$(PublishDir)\vulkan\icd.d\" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(DataFiles_osx-arm)" DestinationFolder="$(PublishDir)\osx-arm\" SkipUnchangedFiles="true" />
+    <MakeDir Directories="$(PublishDir)\Data\Plugins\" />
+    <Copy SourceFiles="@(DataFiles_razor)" DestinationFolder="$(PublishDir)\Data\Plugins\" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(DataFiles_classicassist)" DestinationFolder="$(PublishDir)\Data\Plugins\" SkipUnchangedFiles="true" />
   </Target>
 
 </Project>
