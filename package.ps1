@@ -1,6 +1,7 @@
 param(
-    [string]$OutDir = "$PSScriptRoot\dist",
-    [string]$ZipName = "TazUO-custom.zip"
+    [string]$OutDir    = "$PSScriptRoot\dist",
+    [string]$ZipName   = "TazUO-BeyondSosaria.zip",
+    [string]$UODataDir = ""   # path to ...UO-Sosaria-Launcher-x.x.x\data\client\
 )
 
 $src  = "$PSScriptRoot\bin\Release\net10.0\win-x64"
@@ -47,6 +48,21 @@ $raw.is_win_maximized      = $true
 $raw.saveaccount           = $false  # don't auto-save his credentials on first run
 $raw.autologin             = $false
 
+# Beyond Sosaria server & client settings
+$raw.ip                  = "play.beyondsosaria.com"
+$raw.port                = 2593
+$raw.clientversion       = "7.0.95.0"
+$raw.encryption          = 0
+$raw.lang                = "ENU"
+$raw.shard_type          = 0
+$raw.reconnect           = $true
+$raw.reconnect_time      = 600000
+$raw.login_music         = $true
+$raw.fixed_time_step     = $true
+$raw.fps                 = 60
+$raw.last_server_name    = "Beyond Sosaria"
+$raw.ultimaonlinedirectory = ""   # empty → TazUO uses its own exe directory
+
 $raw | ConvertTo-Json -Depth 10 | Set-Content "$OutDir\settings.json" -Encoding UTF8
 
 Write-Host "Created sanitized settings.json (server: $($raw.ip):$($raw.port))" -ForegroundColor Cyan
@@ -74,7 +90,7 @@ if ($reAsset) {
     }
     Remove-Item $tmpZip, $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
 } else {
-    Write-Host "WARNING: No Razor Enhanced release ZIP found — skipping" -ForegroundColor Yellow
+    Write-Host "WARNING: No Razor Enhanced release ZIP found - skipping" -ForegroundColor Yellow
 }
 
 # ── 4c. Download ClassicAssist plugin ─────────────────────────────────────────
@@ -100,7 +116,50 @@ if ($caAsset) {
     }
     Remove-Item $tmpZip, $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
 } else {
-    Write-Host "WARNING: No ClassicAssist release ZIP found — skipping" -ForegroundColor Yellow
+    Write-Host "WARNING: No ClassicAssist release ZIP found - skipping" -ForegroundColor Yellow
+}
+
+# ── 4d. Bundle Beyond Sosaria UO data files ───────────────────────────────────
+# Auto-discover the BS launcher data directory if not supplied as a parameter
+if (-not $UODataDir) {
+    $bsRoot = "C:\Users\$env:USERNAME\Beyond Sosaria"
+    $launcher = Get-ChildItem $bsRoot -Directory -Filter "UO-Sosaria-Launcher-*" `
+                    -ErrorAction SilentlyContinue |
+                Sort-Object Name -Descending | Select-Object -First 1
+    if ($launcher) { $UODataDir = "$($launcher.FullName)\data\client" }
+}
+
+if ($UODataDir -and (Test-Path $UODataDir)) {
+    Write-Host "Bundling UO data from: $UODataDir" -ForegroundColor Cyan
+
+    # Extensions and directories to skip (TazUO binaries / personal config)
+    $skipExt  = @('.exe','.dll','.pdb','.so','.dylib','.nettrace','.speedscope.json')
+    $skipDirs = @('x64','lib64','osx','osx-arm','win-arm','vulkan','iplib',
+                  'Data\Plugins','Data\Profiles','Data/Plugins','Data/Profiles')
+
+    $copied = 0
+    Get-ChildItem $UODataDir -Recurse -File | ForEach-Object {
+        $rel = $_.FullName.Substring($UODataDir.TrimEnd('\').Length + 1)
+
+        # Skip excluded extensions
+        if ($skipExt -contains $_.Extension.ToLower()) { return }
+
+        # Skip excluded directories
+        foreach ($sd in $skipDirs) {
+            if ($rel.StartsWith($sd, [System.StringComparison]::OrdinalIgnoreCase)) { return }
+        }
+
+        $dest = Join-Path $OutDir $rel
+        $destDir = Split-Path $dest -Parent
+        if (-not (Test-Path $destDir)) { New-Item $destDir -ItemType Directory -Force | Out-Null }
+        Copy-Item $_.FullName -Destination $dest -Force
+        $copied++
+    }
+
+    Write-Host "Bundled $copied UO data files" -ForegroundColor Cyan
+} else {
+    Write-Host "WARNING: UO data directory not found - package will require manual UO path setup" -ForegroundColor Yellow
+    Write-Host "  Supply -UODataDir 'path\to\UO-Sosaria-Launcher-x.x.x\data\client'" -ForegroundColor Yellow
 }
 
 # ── 5. Zip ────────────────────────────────────────────────────────────────────
@@ -111,10 +170,9 @@ Write-Host ""
 Write-Host "Package ready ($sizeMB MB):" -ForegroundColor Green
 Write-Host "  $zip"
 Write-Host ""
-Write-Host "Server owner setup:" -ForegroundColor Yellow
-Write-Host "  1. Extract to any folder"
+Write-Host "Beyond Sosaria - player setup:" -ForegroundColor Yellow
+Write-Host "  1. Extract $ZipName to any folder"
 Write-Host "  2. Run TazUO.exe"
-Write-Host "  3. At the login screen, enter:"
-Write-Host "     - UO Data Directory  ->  path to his UO client files (map0.mul etc)"
-Write-Host "     - Username / Password"
-Write-Host "     - Server IP/Port are pre-filled as: $($raw.ip):$($raw.port)"
+Write-Host "  3. Enter your Beyond Sosaria username and password"
+Write-Host "     Server is pre-filled: $($raw.ip):$($raw.port)"
+Write-Host "  (UO data is bundled - no separate UO installation needed)"
