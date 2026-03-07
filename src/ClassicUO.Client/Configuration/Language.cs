@@ -77,6 +77,7 @@ namespace ClassicUO.Configuration
         public string ButtonNameplates { get; set; } = "Nameplate Options";
         public string ButtonCooldowns { get; set; } = "Cooldown bars";
         public string ButtonTazUO { get; set; } = "TazUO Specific";
+        public string ButtonPlugins { get; set; } = "Plugins";
         public string ButtonMobiles { get; set; } = "Mobiles";
         public string ButtonGumpContext { get; set; } = "Gumps & Context";
         public string ButtonMisc { get; set; } = "Misc";

@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TazUO — 03: Network &amp; Packet System</title>
+  <style>
+    :root {
+      --bg:#0f1117;--surface:#181c27;--card:#1e2233;--border:#2a3050;
+      --accent:#4f8ef7;--accent2:#7c5cfc;--good:#3ecf8e;--warn:#f5a623;
+      --bad:#e05252;--text:#cdd6f4;--muted:#7480a0;--code-bg:#12151f;
+      --code-key:#cba6f7;--code-str:#a6e3a1;--code-num:#fab387;
+      --code-cmt:#585b75;--code-typ:#89dceb;--code-fn:#89b4fa;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.65}
+    a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+    .page{display:flex;min-height:100vh}
+    nav{width:270px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:28px 0;position:sticky;top:0;height:100vh;overflow-y:auto}
+    main{flex:1;padding:48px 56px;max-width:1000px}
+    @media(max-width:860px){.page{flex-direction:column}nav{width:100%;height:auto;position:static}main{padding:28px 20px}}
+    .nav-logo{font-size:1.1rem;font-weight:700;color:var(--accent);padding:0 24px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+    .nav-logo .badge{font-size:0.65rem;background:var(--accent2);color:#fff;padding:2px 7px;border-radius:99px;font-weight:600;letter-spacing:.04em}
+    .nav-section{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding:20px 24px 6px}
+    nav ul{list-style:none}
+    nav ul li a{display:block;padding:6px 24px;font-size:0.9rem;color:var(--muted);border-left:3px solid transparent;transition:all .15s}
+    nav ul li a:hover,nav ul li a.active{color:var(--text);border-left-color:var(--accent);background:rgba(79,142,247,.06);text-decoration:none}
+    h1{font-size:2.2rem;font-weight:800;line-height:1.2;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px}
+    .subtitle{color:var(--muted);font-size:1.05rem;margin-bottom:36px}
+    h2{font-size:1.55rem;font-weight:700;color:#e0e6ff;margin:56px 0 14px;padding-top:12px;border-top:1px solid var(--border)}
+    h2:first-of-type{border-top:none;margin-top:0}
+    h3{font-size:1.15rem;font-weight:700;color:var(--accent);margin:32px 0 10px}
+    h4{font-size:0.95rem;font-weight:700;color:var(--code-typ);margin:20px 0 8px;text-transform:uppercase;letter-spacing:.06em}
+    p{margin-bottom:14px}ul,ol{padding-left:22px;margin-bottom:14px}li{margin-bottom:4px}
+    strong{color:#e0e6ff}
+    .callout{border-left:4px solid;border-radius:0 8px 8px 0;padding:14px 18px;margin:18px 0;font-size:0.94rem}
+    .callout.info{border-color:var(--accent);background:rgba(79,142,247,.08)}
+    .callout.good{border-color:var(--good);background:rgba(62,207,142,.08)}
+    .callout.warn{border-color:var(--warn);background:rgba(245,166,35,.08)}
+    .callout.danger{border-color:var(--bad);background:rgba(224,82,82,.08)}
+    .callout .label{font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+    .callout.info .label{color:var(--accent)}.callout.good .label{color:var(--good)}
+    .callout.warn .label{color:var(--warn)}.callout.danger .label{color:var(--bad)}
+    pre{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:20px;overflow-x:auto;margin:14px 0 20px;font-size:0.87rem;line-height:1.6}
+    code{font-family:'Cascadia Code','Fira Code','Consolas',monospace}
+    p code,li code{background:var(--code-bg);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:0.86em;color:var(--code-typ)}
+    .kw{color:var(--code-key)}.ty{color:var(--code-typ)}.fn{color:var(--code-fn)}
+    .st{color:var(--code-str)}.nm{color:var(--code-num)}.cm{color:var(--code-cmt);font-style:italic}
+    .hl{background:rgba(79,142,247,.15);display:block;margin:0 -20px;padding:0 20px}
+    .flow{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:24px 28px;margin:14px 0 20px;font-family:monospace;font-size:0.88rem;line-height:1.9;white-space:pre;overflow-x:auto}
+    table{width:100%;border-collapse:collapse;margin:14px 0 20px;font-size:0.9rem}
+    th{background:var(--card);color:var(--accent);font-size:0.78rem;text-transform:uppercase;letter-spacing:.07em;padding:10px 14px;text-align:left;border-bottom:2px solid var(--border)}
+    td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+    tr:last-child td{border-bottom:none}tr:hover td{background:rgba(255,255,255,.02)}td code{font-size:0.83rem}
+    .file{display:inline-block;background:#1a1f35;border:1px solid var(--border);border-radius:6px;padding:2px 10px;font-family:monospace;font-size:0.8rem;color:var(--code-fn);margin:2px 2px}
+    .doc-nav{display:flex;justify-content:space-between;align-items:center;margin-top:60px;padding-top:24px;border-top:1px solid var(--border);font-size:0.9rem}
+    .doc-nav a{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 18px;font-weight:600;transition:border-color .15s}
+    .doc-nav a:hover{border-color:var(--accent);text-decoration:none}
+    hr{border:none;border-top:1px solid var(--border);margin:40px 0}
+  </style>
+</head>
+<body>
+<div class="page">
+<nav>
+  <div class="nav-logo">TazUO Docs <span class="badge">03</span></div>
+  <div class="nav-section">This Document</div>
+  <ul>
+    <li><a href="#overview">Architecture overview</a></li>
+    <li><a href="#connection">Connection lifecycle</a></li>
+    <li><a href="#threading">Threading model</a></li>
+    <li><a href="#receive">Receive pipeline</a></li>
+    <li><a href="#send">Send pipeline</a></li>
+    <li><a href="#packet-structure">Packet structure</a></li>
+    <li><a href="#dispatch">Opcode dispatch</a></li>
+    <li><a href="#outgoing">Outgoing packets</a></li>
+    <li><a href="#encryption">Encryption</a></li>
+    <li><a href="#packet-catalog">Packet catalog</a></li>
+    <li><a href="#thread-safety">Thread safety rules</a></li>
+    <li><a href="#going-forward">Going forward</a></li>
+  </ul>
+  <div class="nav-section">All Documents</div>
+  <ul>
+    <li><a href="index.html">Index</a></li>
+    <li><a href="01-architecture.html">01 Architecture</a></li>
+    <li><a href="02-gameobjects.html">02 Game Objects</a></li>
+    <li><a href="03-network.html" class="active">03 Network</a></li>
+    <li><a href="04-rendering.html">04 Rendering</a></li>
+    <li><a href="05-managers-core.html">05 Core Managers</a></li>
+    <li><a href="06-managers-tazuo.html">06 TazUO Managers</a></li>
+    <li><a href="07-ui-controls.html">07 UI Controls</a></li>
+    <li><a href="08-ui-gumps.html">08 UI Gumps</a></li>
+    <li><a href="09-scripting.html">09 Scripting</a></li>
+  </ul>
+</nav>
+
+<main>
+<h1>Network &amp; Packet System</h1>
+<p class="subtitle">
+  How TazUO connects to the UO server, the two-thread architecture for send and receive,
+  packet parsing and opcode dispatch, outgoing packet construction, encryption modes,
+  and the critical thread-safety rules every developer must follow.
+</p>
+
+<!-- ─────────────────────── OVERVIEW ─────────────────────── -->
+<h2 id="overview">Architecture Overview</h2>
+
+<p>
+  The network layer is split across two files and one subdirectory:
+</p>
+
+<table>
+  <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><span class="file">Network/AsyncNetClient.cs</span></td><td><code>AsyncSocketWrapper</code> (TCP wrapper) + <code>AsyncNetClient</code> (protocol layer). The singleton is <code>AsyncNetClient.Socket</code>.</td></tr>
+    <tr><td><span class="file">Network/PacketHandlers/HandlerRegistry.cs</span></td><td>Full opcode-to-handler registration list.</td></tr>
+    <tr><td><span class="file">Network/PacketHandlers/PacketParser.cs</span></td><td>Parses raw bytes from the circular buffer and dispatches to handlers.</td></tr>
+    <tr><td><span class="file">Network/PacketHandlers/*.cs</span></td><td>~100 individual handler files, one per packet type or logical group.</td></tr>
+    <tr><td><span class="file">Network/OutgoingPackets.cs</span></td><td>Extension methods on <code>AsyncNetClient</code> that build and send every outgoing packet type.</td></tr>
+    <tr><td><span class="file">Network/Encryption/Encryption.cs</span></td><td>Encryption helper; derives keys from client version, delegates to Blowfish/Twofish/LoginCrypt.</td></tr>
+    <tr><td><span class="file">Network/PacketsTable.cs</span></td><td>256-entry table mapping opcode → fixed packet length (−1 = variable length).</td></tr>
+  </tbody>
+</table>
+
+<!-- ─────────────────────── CONNECTION ─────────────────────── -->
+<h2 id="connection">Connection Lifecycle</h2>
+
+<div class="flow">Login flow
+───────────────────────────────────────────────────────────
+1. LoginScene.ConnectToLoginServer()
+   └─ await AsyncNetClient.Socket.Connect(ip, port)
+         │
+         ├─ AsyncSocketWrapper.ConnectAsync()   — TCP connect (2 s timeout)
+         ├─ Task.Run(ReceiveLoopAsync)           — background receive task starts
+         └─ Task.Run(NetworkLoopAsync)           — background send task starts
+
+2. Client sends 0xEF SeedRequest (new handshake) or 0x00 Login Seed
+   (depends on client version / server flags)
+
+3. Server sends 0xA8 Server List → LoginScene shows server list
+
+4. Client sends 0xA0 Select Server
+
+5. Server sends 0x8C Server Relay (new IP:port for game connection)
+
+6. LoginScene reconnects to game server → sends 0x91 GameLogin
+
+7. Server sends 0x5D Play Character → client sends 0x5D back
+
+8. Server sends 0x1B Enter World → World is created, map loaded, GameScene started
+
+9. Server sends 0x55 Login Complete → all done; normal play begins
+───────────────────────────────────────────────────────────</div>
+
+<p>
+  The single <code>AsyncNetClient.Socket</code> instance is reused across the login → relay
+  reconnect sequence. <code>Connect()</code> clears the send buffer and resets Huffman state
+  before each connection attempt.
+</p>
+
+<!-- ─────────────────────── THREADING ─────────────────────── -->
+<h2 id="threading">Threading Model</h2>
+
+<p>
+  TazUO uses <strong>three threads</strong> for networking. Understanding which data each
+  thread touches is essential to writing safe code.
+</p>
+
+<div class="flow">┌──────────────────────────────────────────────────────────┐
+│  RECEIVE TASK  (Task.Run, thread pool)                   │
+│                                                          │
+│  AsyncSocketWrapper.ReceiveLoopAsync()                   │
+│    → await stream.ReadAsync(buffer, ...)  — blocks here  │
+│    → client.OnDataReceived(data)                         │
+│         → ProcessEncryption(span)   decrypt in-place     │
+│         → DecompressBuffer(span)    Huffman decompress    │
+│         → _incomingMessages.Enqueue(bytes)  ← ConcurrentQueue │
+└──────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────┐
+│  SEND TASK  (Task.Run, thread pool)                      │
+│                                                          │
+│  AsyncNetClient.NetworkLoopAsync()                       │
+│    → await _sendSignal.WaitAsync(50ms)  — blocks here    │
+│    → ProcessSendAsync()                                  │
+│         → lock(_sendStream) { drain CircularBuffer }     │
+│         → await socket.SendAsync(chunk)                  │
+└──────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────┐
+│  MAIN THREAD  (FNA game loop)                            │
+│                                                          │
+│  GameController.Update()                                 │
+│    → while (Socket.TryDequeuePacket(out byte[] pkt))     │
+│         PacketParser.Instance.ParsePackets(world, pkt)   │
+│              → _handlers[opcode](world, ref reader)      │
+│                   → mutates World.Mobiles / Items etc.   │
+└──────────────────────────────────────────────────────────┘</div>
+
+<div class="callout danger">
+  <div class="label">Critical thread-safety rule</div>
+  Only the <strong>main thread</strong> may read or write <code>World.Mobiles</code>,
+  <code>World.Items</code>, <code>World.Player</code>, or any <code>GameObject</code> field.
+  The receive task only enqueues raw byte arrays into a <code>ConcurrentQueue</code>. The
+  main thread dequeues and dispatches during <code>Update()</code>. Never access world state
+  from the receive or send tasks.
+</div>
+
+<!-- ─────────────────────── RECEIVE PIPELINE ─────────────────────── -->
+<h2 id="receive">Receive Pipeline in Detail</h2>
+
+<pre><code><span class="cm">// AsyncSocketWrapper.ReceiveLoopAsync (background thread)</span>
+<span class="kw">byte</span>[] buffer = ArrayPool&lt;<span class="kw">byte</span>&gt;.Shared.<span class="fn">Rent</span>(<span class="nm">4096</span>);
+<span class="kw">while</span> (!cancellationToken.IsCancellationRequested &amp;&amp; IsConnected)
+{
+    <span class="kw">int</span> bytesRead = <span class="kw">await</span> _stream.<span class="fn">ReadAsync</span>(buffer, <span class="nm">0</span>, buffer.Length, ct);
+    <span class="kw">if</span> (bytesRead == <span class="nm">0</span>) { <span class="fn">Disconnect</span>(); <span class="kw">break</span>; }
+    <span class="cm">// Copy to heap (the handler runs on main thread later)</span>
+    _client.<span class="fn">OnDataReceived</span>(data);
+}
+
+<span class="cm">// AsyncNetClient.OnDataReceived — still background thread</span>
+<span class="kw">void</span> <span class="fn">OnDataReceived</span>(<span class="kw">byte</span>[] data)
+{
+    <span class="fn">ProcessEncryption</span>(data.AsSpan());    <span class="cm">// decrypt in-place</span>
+    <span class="ty">Span</span>&lt;<span class="kw">byte</span>&gt; decompressed = <span class="fn">DecompressBuffer</span>(data.AsSpan());
+    _incomingMessages.<span class="fn">Enqueue</span>(decompressed.ToArray());  <span class="cm">// ConcurrentQueue</span>
+}
+
+<span class="cm">// Main thread — GameController.Update()</span>
+<span class="kw">while</span> (<span class="ty">AsyncNetClient</span>.Socket.<span class="fn">TryDequeuePacket</span>(<span class="kw">out byte</span>[] pkt))
+    <span class="ty">PacketParser</span>.Instance.<span class="fn">ParsePackets</span>(world, pkt.AsSpan());</code></pre>
+
+<p>
+  The <code>ReceiveLoopAsync</code> calls <code>ReadAsync</code> which blocks until data
+  arrives — no polling. The Huffman decompressor (<code>DecompressBuffer</code>) is enabled
+  after the server sends 0x80 Compression Enable or after the login handshake for newer
+  clients.
+</p>
+
+<!-- ─────────────────────── SEND PIPELINE ─────────────────────── -->
+<h2 id="send">Send Pipeline in Detail</h2>
+
+<pre><code><span class="cm">// AsyncNetClient.Send() — called from main thread</span>
+<span class="kw">public void</span> <span class="fn">Send</span>(<span class="ty">Span</span>&lt;<span class="kw">byte</span>&gt; message, ...)
+{
+    <span class="cm">// 1. Optional plugin intercept</span>
+    <span class="kw">if</span> (!ignorePlugin &amp;&amp; <span class="ty">Plugin</span>.Enabled &amp;&amp; !<span class="ty">Plugin</span>.<span class="fn">ProcessSendPacket</span>(<span class="kw">ref</span> message)) <span class="kw">return</span>;
+
+    <span class="cm">// 2. Encrypt (in-place, Span overwrite)</span>
+    <span class="ty">EncryptionHelper</span>.Instance?.<span class="fn">Encrypt</span>(!_isCompressionEnabled, message, message, message.Length);
+
+    <span class="cm">// 3. Enqueue to circular buffer (locked)</span>
+    <span class="kw">lock</span> (_sendStream) { _sendStream.<span class="fn">Enqueue</span>(message); }
+
+    <span class="cm">// 4. Signal the send task</span>
+    _sendSignal.<span class="fn">Release</span>();
+}
+
+<span class="cm">// NetworkLoopAsync — background send task</span>
+<span class="kw">while</span> (!ct.IsCancellationRequested &amp;&amp; IsConnected)
+{
+    <span class="kw">await</span> _sendSignal.<span class="fn">WaitAsync</span>(<span class="nm">50</span>, ct);    <span class="cm">// blocks until Send() signals</span>
+    <span class="kw">await</span> <span class="fn">ProcessSendAsync</span>(ct);              <span class="cm">// drain CircularBuffer → stream.WriteAsync</span>
+    Statistics.<span class="fn">Update</span>();
+}</code></pre>
+
+<p>
+  The 50 ms timeout in <code>WaitAsync</code> ensures statistics are updated even when no
+  packets are being sent. The send task drains the entire <code>CircularBuffer</code> each
+  wake-up, so multiple packets enqueued between ticks are coalesced into fewer
+  <code>WriteAsync</code> calls.
+</p>
+
+<!-- ─────────────────────── PACKET STRUCTURE ─────────────────────── -->
+<h2 id="packet-structure">Packet Structure</h2>
+
+<p>
+  Every UO packet begins with a 1-byte opcode. Whether the packet has a fixed or variable
+  length depends on the opcode:
+</p>
+
+<div class="flow">Fixed-length packet (e.g. 0x73 Ping — 2 bytes):
+  [ 0x73 ] [ data... ]
+  ↑ opcode  (total length known from PacketsTable)
+
+Variable-length packet (e.g. 0x1C Talk — many bytes):
+  [ opcode ] [ length hi ] [ length lo ] [ data... ]
+  ↑           ↑ big-endian ushort total length including these 3 bytes</div>
+
+<p>
+  <code>PacketsTable</code> holds a <code>short[256]</code> indexed by opcode. A value ≥ 0
+  is the fixed packet length. A value of <code>−1</code> means the next two bytes (bytes 1–2)
+  are a big-endian ushort total length. The parser uses this to know how many bytes to
+  accumulate before dispatching.
+</p>
+
+<pre><code><span class="cm">// PacketsTable sample (fixed vs variable)</span>
+<span class="nm">0x0068</span>, <span class="cm">// 0x00 — 104 bytes fixed</span>
+<span class="nm">0x0005</span>, <span class="cm">// 0x01 — 5 bytes fixed</span>
+<span class="nm">-1</span>,     <span class="cm">// 0x03 — variable length (read bytes 1-2)</span>
+<span class="nm">-1</span>,     <span class="cm">// 0x0C — variable length</span></code></pre>
+
+<!-- ─────────────────────── DISPATCH ─────────────────────── -->
+<h2 id="dispatch">Opcode Dispatch</h2>
+
+<p>
+  <code>PacketParser</code> is a singleton with a <code>PacketHandler[256]</code> array.
+  Handlers are delegates with signature <code>(World world, ref StackDataReader reader)</code>.
+  Registration happens at construction from <code>PacketHandlerRegistry.GetHandlers()</code>.
+</p>
+
+<pre><code><span class="cm">// PacketParser constructor</span>
+<span class="kw">foreach</span> ((<span class="kw">uint</span> id, <span class="ty">PacketHandler</span> handler) <span class="kw">in</span> <span class="ty">PacketHandlerRegistry</span>.<span class="fn">GetHandlers</span>())
+    <span class="fn">AddHandler</span>(id, handler, <span class="kw">false</span>);
+
+<span class="cm">// Dispatch (inside ParsePackets)</span>
+<span class="ty">PacketHandler</span> handler = _handlers[opcode];
+<span class="kw">if</span> (handler != <span class="kw">null</span>)
+    handler(world, <span class="kw">ref</span> reader);   <span class="cm">// ← called on main thread</span></code></pre>
+
+<p>
+  Every handler receives a <code>ref StackDataReader</code> which wraps the packet bytes.
+  The reader provides typed read methods: <code>ReadUInt8()</code>, <code>ReadUInt16BE()</code>,
+  <code>ReadUInt32BE()</code>, <code>ReadASCII(n)</code>, <code>ReadUnicode(n)</code>, etc.
+  Handlers may also register additional handlers at runtime via
+  <code>PacketParser.Instance.AddHandler()</code> (used by plugins).
+</p>
+
+<!-- ─────────────────────── OUTGOING PACKETS ─────────────────────── -->
+<h2 id="outgoing">Building &amp; Sending Outgoing Packets</h2>
+
+<p>
+  All outgoing packets are built using <code>StackDataWriter</code> (a stack-allocated byte
+  writer) and sent via <code>socket.Send(writer.BufferWritten)</code>. The pattern is
+  consistent across all packet types:
+</p>
+
+<pre><code><span class="cm">// Example: Send_Ping (OutgoingPackets.cs)</span>
+<span class="kw">public static void</span> <span class="fn">Send_Ping</span>(<span class="kw">this</span> <span class="ty">AsyncNetClient</span> socket, <span class="kw">byte</span> idx)
+{
+    <span class="kw">const byte</span> ID = <span class="nm">0x73</span>;
+    <span class="kw">int</span> length = <span class="ty">AsyncNetClient</span>.PacketsTable.<span class="fn">GetPacketLength</span>(ID);
+
+    <span class="cm">// For fixed-length packets: allocate exact size</span>
+    <span class="cm">// For variable-length: start with 64 bytes (resizes if needed)</span>
+    <span class="kw">var</span> writer = <span class="kw">new</span> <span class="ty">StackDataWriter</span>(length &lt; <span class="nm">0</span> ? <span class="nm">64</span> : length);
+    writer.<span class="fn">WriteUInt8</span>(ID);
+
+    <span class="kw">if</span> (length &lt; <span class="nm">0</span>)
+        writer.<span class="fn">WriteZero</span>(<span class="nm">2</span>);   <span class="cm">// placeholder for length field</span>
+
+    writer.<span class="fn">WriteUInt8</span>(idx);
+
+    <span class="kw">if</span> (length &lt; <span class="nm">0</span>)
+    {
+        <span class="cm">// Backfill actual length at bytes 1-2</span>
+        writer.<span class="fn">Seek</span>(<span class="nm">1</span>, <span class="ty">SeekOrigin</span>.Begin);
+        writer.<span class="fn">WriteUInt16BE</span>((<span class="kw">ushort</span>)writer.BytesWritten);
+    }
+    <span class="kw">else</span>
+    {
+        writer.<span class="fn">WriteZero</span>(length - writer.BytesWritten); <span class="cm">// pad to fixed length</span>
+    }
+
+    socket.<span class="fn">Send</span>(writer.BufferWritten);
+    writer.<span class="fn">Dispose</span>();
+}</code></pre>
+
+<div class="callout info">
+  <div class="label">StackDataWriter</div>
+  <code>StackDataWriter</code> uses stack memory for small packets and rents from
+  <code>ArrayPool</code> for larger ones. Always call <code>writer.Dispose()</code>
+  after sending to return rented buffers. The <code>Send()</code> call copies
+  <code>writer.BufferWritten</code> into the circular send buffer, so it's safe to
+  dispose immediately after.
+</div>
+
+<!-- ─────────────────────── ENCRYPTION ─────────────────────── -->
+<h2 id="encryption">Encryption</h2>
+
+<p>
+  TazUO automatically selects the correct encryption based on client version.
+  <code>EncryptionHelper.CalculateEncryption(clientVersion)</code> derives three 32-bit keys
+  from the version number and returns the appropriate encryption type:
+</p>
+
+<table>
+  <thead><tr><th>EncryptionType</th><th>When used</th><th>Algorithm</th></tr></thead>
+  <tbody>
+    <tr><td><code>NONE</code></td><td>Servers that disable encryption</td><td>Pass-through</td></tr>
+    <tr><td><code>OLD_BFISH</code></td><td>Clients &lt; 1.25.35</td><td>Blowfish with old key schedule</td></tr>
+    <tr><td><code>BLOWFISH__1_25_36</code></td><td>1.25.36 – 2.0.2</td><td>Blowfish variant</td></tr>
+    <tr><td><code>BLOWFISH</code></td><td>2.0.3 – modern non-SA</td><td>Standard Blowfish</td></tr>
+    <tr><td><code>BLOWFISH__2_0_3</code></td><td>Client 2.0.3 special case</td><td>Fixed keys: 0x2D13A5FC…</td></tr>
+    <tr><td><code>TWOFISH_MD5</code></td><td>SA clients (7.0+)</td><td>Twofish + MD5 key derivation</td></tr>
+  </tbody>
+</table>
+
+<p>
+  The encryption type can also be forced via the <code>-encryption N</code> CLI flag, where
+  N maps to the <code>EncryptionType</code> enum value. This is useful when connecting to
+  servers that don't match the standard version-to-encryption mapping.
+</p>
+
+<p>
+  Login packets use <strong>LoginCrypt</strong> (a separate XOR-based stream cipher) for the
+  initial handshake, regardless of the game encryption type. After the handshake,
+  <code>EnableCompression()</code> is called on the client to enable Huffman decompression
+  and switch to game encryption.
+</p>
+
+<!-- ─────────────────────── PACKET CATALOG ─────────────────────── -->
+<h2 id="packet-catalog">Packet Catalog by Category</h2>
+
+<p>
+  There are ~100 packet handler files. Here are the key packets by category:
+</p>
+
+<h3>Login &amp; Session</h3>
+<table>
+  <thead><tr><th>Opcode</th><th>Handler</th><th>Direction</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>0x00</code></td><td>—</td><td>C→S</td><td>Login seed (old handshake)</td></tr>
+    <tr><td><code>0x80</code></td><td>—</td><td>C→S</td><td>Account Login request</td></tr>
+    <tr><td><code>0xA8</code></td><td>ServerListReceived</td><td>S→C</td><td>List of available shards</td></tr>
+    <tr><td><code>0xA0</code></td><td>—</td><td>C→S</td><td>Select shard</td></tr>
+    <tr><td><code>0x8C</code></td><td>ReceiveServerRelay</td><td>S→C</td><td>Redirect to game server IP:port</td></tr>
+    <tr><td><code>0x91</code></td><td>—</td><td>C→S</td><td>Game server login (auth key + account)</td></tr>
+    <tr><td><code>0xBD</code></td><td>ClientVersion</td><td>S→C</td><td>Server requests client version string</td></tr>
+    <tr><td><code>0x5D</code></td><td>ReceiveCharacterList</td><td>S→C</td><td>Character list</td></tr>
+    <tr><td><code>0x1B</code></td><td>EnterWorld</td><td>S→C</td><td>Player enters world — creates Map, GameScene</td></tr>
+    <tr><td><code>0x55</code></td><td>LoginComplete</td><td>S→C</td><td>All initial packets sent; send client features</td></tr>
+  </tbody>
+</table>
+
+<h3>Mobile &amp; Item Updates</h3>
+<table>
+  <thead><tr><th>Opcode</th><th>Handler</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>0x78</code></td><td>UpdateObject</td><td>Full mobile/item state (initial or after range re-enter)</td></tr>
+    <tr><td><code>0x77</code></td><td>UpdateCharacter</td><td>Mobile position + direction update (walk step)</td></tr>
+    <tr><td><code>0x20</code></td><td>UpdatePlayer</td><td>Player character update (self)</td></tr>
+    <tr><td><code>0x1A</code></td><td>UpdateItem</td><td>Item on ground (graphic, position, amount)</td></tr>
+    <tr><td><code>0x1D</code></td><td>DeleteObject</td><td>Remove entity from world</td></tr>
+    <tr><td><code>0x11</code></td><td>CharacterStatus</td><td>HP/Mana/Stamina/Stats for a mobile</td></tr>
+    <tr><td><code>0x2D</code></td><td>MobileAttributes</td><td>HP/Mana/Stamina max values</td></tr>
+    <tr><td><code>0x0B</code></td><td>Damage</td><td>Damage number to display</td></tr>
+    <tr><td><code>0x2F</code></td><td>Swing</td><td>Attack animation trigger</td></tr>
+    <tr><td><code>0x2E</code></td><td>EquipItem</td><td>Item equipped on a layer slot</td></tr>
+  </tbody>
+</table>
+
+<h3>Movement</h3>
+<table>
+  <thead><tr><th>Opcode</th><th>Handler</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>0x21</code></td><td>DenyWalk</td><td>Server rejects walk request — snap player back</td></tr>
+    <tr><td><code>0x22</code></td><td>ConfirmWalk</td><td>Server confirms walk step + sends notoriety of nearby</td></tr>
+    <tr><td><code>0x97</code></td><td>—</td><td>C→S Walk request with sequence number</td></tr>
+  </tbody>
+</table>
+
+<h3>Chat &amp; Text</h3>
+<table>
+  <thead><tr><th>Opcode</th><th>Handler</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>0x1C</code></td><td>Talk</td><td>ASCII speech message from mobile</td></tr>
+    <tr><td><code>0xAE</code></td><td>UnicodeTalk</td><td>Unicode speech message</td></tr>
+    <tr><td><code>0xB2</code></td><td>ChatMessage</td><td>UO chat channel message</td></tr>
+  </tbody>
+</table>
+
+<h3>Container &amp; Inventory</h3>
+<table>
+  <thead><tr><th>Opcode</th><th>Handler</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>0x24</code></td><td>OpenContainer</td><td>Open a container gump (sends gumpID + serial)</td></tr>
+    <tr><td><code>0x25</code></td><td>UpdateContainedItem</td><td>Single item added/updated in container</td></tr>
+    <tr><td><code>0x3C</code></td><td>UpdateContainedItems</td><td>Bulk container contents</td></tr>
+  </tbody>
+</table>
+
+<h3>UI &amp; Gumps</h3>
+<table>
+  <thead><tr><th>Opcode</th><th>Handler</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>0xB0</code></td><td>OpenGump</td><td>Server sends generic gump layout + data</td></tr>
+    <tr><td><code>0x38</code> ext</td><td>OpenCompressedGump</td><td>Zlib-compressed gump layout (modern servers)</td></tr>
+    <tr><td><code>0x6C</code></td><td>TargetCursor</td><td>Server requests a target from the player</td></tr>
+  </tbody>
+</table>
+
+<!-- ─────────────────────── THREAD SAFETY ─────────────────────── -->
+<h2 id="thread-safety">Thread Safety Rules</h2>
+
+<table>
+  <thead><tr><th>Resource</th><th>Who may access</th><th>How</th></tr></thead>
+  <tbody>
+    <tr><td><code>World.Mobiles</code>, <code>World.Items</code></td><td>Main thread only</td><td>Plain <code>Dictionary&lt;uint, T&gt;</code> — no thread safety</td></tr>
+    <tr><td><code>World.Player</code> and all <code>GameObject</code> fields</td><td>Main thread only</td><td>No synchronisation; accessed only in Update/Draw</td></tr>
+    <tr><td><code>AsyncNetClient._incomingMessages</code></td><td>Receive task (write) + main thread (read)</td><td><code>ConcurrentQueue&lt;byte[]&gt;</code></td></tr>
+    <tr><td><code>AsyncNetClient._sendStream</code></td><td>Main thread (write) + send task (read)</td><td><code>lock(_sendStream)</code> on both sides</td></tr>
+    <tr><td><code>World._corpses</code></td><td>Main thread (write) + any (read)</td><td><code>lock(_corpsesLock)</code>; use <code>GetCorpseSnapshot()</code></td></tr>
+    <tr><td><code>AsyncNetClient.Socket</code></td><td>Any thread (the singleton reference itself)</td><td>The static reference is set once; the object is thread-safe for <code>Send()</code> and <code>TryDequeuePacket()</code></td></tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <div class="label">Plugin packet injection</div>
+  <code>Send()</code> calls <code>Plugin.ProcessSendPacket()</code> before encrypting.
+  Plugins may modify or suppress outgoing packets. If you see unexpected packet suppression,
+  check if a plugin is active via <code>Plugin.Enabled</code>.
+</div>
+
+<!-- ─────────────────────── GOING FORWARD ─────────────────────── -->
+<h2 id="going-forward">Going Forward</h2>
+
+<h3>Adding a New Incoming Packet Handler</h3>
+
+<ol>
+  <li>Create <span class="file">Network/PacketHandlers/MyPacket.cs</span> with a static <code>Receive(World world, ref StackDataReader reader)</code> method.</li>
+  <li>Register it in <code>HandlerRegistry.GetHandlers()</code>: add <code>(0xXX, MyPacket.Receive)</code> to the list.</li>
+  <li>If the packet is variable-length, add <code>−1</code> at the opcode index in <code>PacketsTable</code>; otherwise add the fixed byte count.</li>
+  <li>Read fields from <code>reader</code> in order. The reader automatically tracks position.</li>
+</ol>
+
+<h3>Adding a New Outgoing Packet</h3>
+
+<ol>
+  <li>Add an extension method <code>Send_MyPacket(this AsyncNetClient socket, ...)</code> in <code>OutgoingPackets.cs</code>.</li>
+  <li>Follow the <code>StackDataWriter</code> pattern: write opcode, optional length placeholder, data fields, then backfill length for variable packets.</li>
+  <li>Always <code>writer.Dispose()</code> after <code>socket.Send()</code>.</li>
+</ol>
+
+<h3>Safe Patterns</h3>
+<ul>
+  <li>Never call <code>AsyncNetClient.Socket.Send()</code> from the receive or send background tasks — it is designed to be called from the main thread only (it locks the send stream).</li>
+  <li>Never access <code>World</code> state from inside a background task or timer callback.</li>
+  <li>Use <code>World.GetCorpseSnapshot()</code> for any cross-thread corpse access.</li>
+  <li>If you need to trigger UI actions from a packet handler, do it directly — handlers already run on the main thread.</li>
+</ul>
+
+<div class="doc-nav">
+  <a href="02-gameobjects.html">← 02 Game Objects</a>
+  <a href="04-rendering.html">04 Rendering →</a>
+</div>
+</main>
+</div>
+</body>
+</html>

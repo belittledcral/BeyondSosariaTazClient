@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TazUO Docs — 06: TazUO Feature Managers</title>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --card: #1c2128;
+    --border: #30363d; --accent: #58a6ff; --accent2: #79c0ff;
+    --text: #e6edf3; --muted: #8b949e; --green: #3fb950;
+    --yellow: #d29922; --red: #f85149; --purple: #bc8cff;
+    --orange: #ffa657;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif;
+         font-size: 15px; line-height: 1.65; display: flex; min-height: 100vh; }
+  nav { width: 260px; min-width: 260px; background: var(--surface); border-right: 1px solid var(--border);
+        padding: 24px 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; flex-shrink: 0; }
+  nav h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+            color: var(--muted); padding: 0 20px 8px; }
+  nav a { display: block; padding: 6px 20px; color: var(--muted); text-decoration: none;
+          font-size: 13px; transition: color .15s, background .15s; border-left: 2px solid transparent; }
+  nav a:hover { color: var(--text); background: var(--card); }
+  nav a.active { color: var(--accent); border-left-color: var(--accent); background: var(--card); }
+  nav .nav-group { margin-bottom: 20px; }
+  main { flex: 1; padding: 48px 60px; max-width: 1100px; }
+  h1 { font-size: 2.2rem; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+  .subtitle { color: var(--muted); font-size: 1.05rem; margin-bottom: 40px; }
+  h2 { font-size: 1.45rem; font-weight: 600; color: var(--accent2); margin: 48px 0 16px;
+       padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.1rem; font-weight: 600; color: var(--orange); margin: 28px 0 12px; }
+  h4 { font-size: .95rem; font-weight: 600; color: var(--purple); margin: 20px 0 8px; }
+  p { margin-bottom: 14px; color: var(--text); }
+  ul, ol { margin: 0 0 14px 24px; }
+  li { margin-bottom: 5px; }
+  code { background: var(--card); border: 1px solid var(--border); border-radius: 4px;
+         padding: 1px 6px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: .87em; color: var(--orange); }
+  pre { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+        padding: 20px; overflow-x: auto; margin: 16px 0 24px; }
+  pre code { background: none; border: none; padding: 0; font-size: .88em; color: var(--text); }
+  .kw { color: #ff7b72; } .ty { color: #79c0ff; } .cm { color: #8b949e; font-style: italic; }
+  .st { color: #a5d6ff; } .nu { color: #79c0ff; } .fn { color: #d2a8ff; }
+  .prop { color: #ffa657; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0 28px; font-size: .9rem; }
+  th { background: var(--card); color: var(--accent2); font-weight: 600; text-align: left;
+       padding: 10px 14px; border: 1px solid var(--border); }
+  td { padding: 9px 14px; border: 1px solid var(--border); vertical-align: top; }
+  tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+  .callout { border-radius: 8px; padding: 16px 20px; margin: 20px 0; border-left: 4px solid; }
+  .callout.info { background: rgba(88,166,255,.08); border-color: var(--accent); }
+  .callout.good { background: rgba(63,185,80,.08); border-color: var(--green); }
+  .callout.warn { background: rgba(210,153,34,.1); border-color: var(--yellow); }
+  .callout.danger { background: rgba(248,81,73,.08); border-color: var(--red); }
+  .callout strong { display: block; margin-bottom: 6px; font-size: .85rem; text-transform: uppercase;
+                    letter-spacing: .5px; }
+  .callout.info strong { color: var(--accent); }
+  .callout.good strong { color: var(--green); }
+  .callout.warn strong { color: var(--yellow); }
+  .callout.danger strong { color: var(--red); }
+  .flow { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+          padding: 20px 28px; margin: 16px 0 24px; font-family: monospace; font-size: .87em;
+          white-space: pre; line-height: 1.7; color: var(--text); overflow-x: auto; }
+  .tag { display: inline-block; font-size: .75rem; font-weight: 600; padding: 2px 8px;
+         border-radius: 12px; margin: 0 3px; }
+  .tag.new { background: rgba(63,185,80,.15); color: var(--green); border: 1px solid var(--green); }
+  .tag.changed { background: rgba(210,153,34,.15); color: var(--yellow); border: 1px solid var(--yellow); }
+  .nav-page-links { display: flex; justify-content: space-between; margin-top: 60px;
+                    padding-top: 24px; border-top: 1px solid var(--border); }
+  .nav-page-links a { color: var(--accent); text-decoration: none; font-size: .95rem; }
+  .nav-page-links a:hover { text-decoration: underline; }
+  .badge { display: inline-block; font-size: .72rem; padding: 1px 7px; border-radius: 10px;
+           background: rgba(188,140,255,.15); color: var(--purple); border: 1px solid var(--purple);
+           margin-left: 6px; vertical-align: middle; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-group">
+    <h2>TazUO Docs</h2>
+    <a href="index.html">← Index</a>
+    <a href="01-architecture.html">01 · Architecture</a>
+    <a href="02-gameobjects.html">02 · Game Objects</a>
+    <a href="03-network.html">03 · Network</a>
+    <a href="04-rendering.html">04 · Rendering</a>
+    <a href="05-managers-core.html">05 · Core Managers</a>
+    <a href="06-managers-tazuo.html" class="active">06 · TazUO Managers</a>
+    <a href="07-ui-controls.html">07 · UI Controls</a>
+    <a href="08-ui-gumps.html">08 · UI Gumps</a>
+    <a href="09-scripting.html">09 · Scripting</a>
+  </div>
+  <div class="nav-group">
+    <h2>This Page</h2>
+    <a href="#overview">Overview</a>
+    <a href="#autoloot">AutoLootManager</a>
+    <a href="#healthlines">HealthLinesManager</a>
+    <a href="#gridhighlight">GridHighlightData</a>
+    <a href="#durability">DurabilityManager</a>
+    <a href="#cooldown">CoolDownBarManager</a>
+    <a href="#worlddata">WorldDataManager</a>
+    <a href="#nameoverhead">NameOverHeadManager</a>
+    <a href="#tooltip">ToolTipOverrideManager</a>
+    <a href="#spellbar">SpellBarManager</a>
+    <a href="#other">Other TazUO Managers</a>
+    <a href="#patterns">TazUO Patterns</a>
+    <a href="#forward">Going Forward</a>
+  </div>
+</nav>
+
+<main>
+  <h1>TazUO Feature Managers</h1>
+  <p class="subtitle">Session 06 — Automation, quality-of-life, and display systems unique to TazUO</p>
+
+  <!-- ═══════════════════════════════════════════════════════ OVERVIEW -->
+  <h2 id="overview">Overview</h2>
+
+  <p>TazUO adds a large layer of managers on top of ClassicUO's core systems. These managers handle features that were never present in the original client: automatic looting, property-based item highlighting, equipment durability tracking, message-triggered cooldown bars, overhead name filtering, and deeply configurable tooltip overrides.</p>
+
+  <p>All TazUO managers follow the same architecture as core managers (see <a href="05-managers-core.html">Session 05</a>) but tend to use <strong>EventSink subscriptions</strong> as their primary update mechanism rather than a polling <code>Update()</code> loop.</p>
+
+  <table>
+    <tr><th>Manager</th><th>File</th><th>Primary Trigger</th><th>Classifies As</th></tr>
+    <tr><td><code>AutoLootManager</code></td><td><code>AutoLootManager.cs</code></td><td>EventSink.OnItemCreated / OnPositionChanged</td><td>Automation</td></tr>
+    <tr><td><code>HealthLinesManager</code></td><td><code>HealthLinesManager.cs</code></td><td>Draw() called by GameScene</td><td>Display</td></tr>
+    <tr><td><code>GridHighlightData</code></td><td><code>GridHighLight/GridHighLightData.cs</code></td><td>OPL receive, background Task</td><td>Display</td></tr>
+    <tr><td><code>DurabilityManager</code></td><td><code>DurabilityManager.cs</code></td><td>EventSink.OPLOnReceive</td><td>Display</td></tr>
+    <tr><td><code>CoolDownBarManager</code></td><td><code>CoolDownBarManager.cs</code></td><td>EventSink.MessageReceived</td><td>Display</td></tr>
+    <tr><td><code>WorldDataManager</code></td><td><code>WorldDataManager.cs</code></td><td>Packet handler calls</td><td>World State</td></tr>
+    <tr><td><code>NameOverHeadManager</code></td><td><code>NameOverHeadManager.cs</code></td><td>KeyDown / KeyUp / IsShowing flag</td><td>Display</td></tr>
+    <tr><td><code>ToolTipOverrideManager</code></td><td><code>ToolTipOverrideManager.cs</code></td><td>Called by Tooltip rendering</td><td>Display</td></tr>
+    <tr><td><code>SpellBarManager</code></td><td><code>SpellBarManager.cs</code></td><td>Key/Controller input</td><td>Input / UI</td></tr>
+    <tr><td><code>GlobalActionCooldown</code></td><td><code>GlobalActionCooldown.cs</code></td><td>BeginCooldown() call</td><td>Throttle</td></tr>
+  </table>
+
+  <!-- ═══════════════════════════════════════════════════════ AUTOLOOT -->
+  <h2 id="autoloot">AutoLootManager <span class="badge">TazUO</span></h2>
+
+  <p><code>AutoLootManager</code> automatically moves items from corpses (and the ground when scavenger mode is active) to the player's backpack or a configured "grab bag." It is a singleton that is created lazily via <code>Instance</code> and reset to <code>null</code> on scene unload.</p>
+
+  <h3>Lifecycle</h3>
+<div class="flow">OnSceneLoad()
+  ├── Load()           — async Task.Factory.StartNew: reads AutoLoot.json into _autoLootItems
+  ├── Subscribe EventSink.OPLOnReceive
+  ├── Subscribe EventSink.OnItemCreated / OnItemUpdated
+  ├── Subscribe EventSink.OnOpenContainer
+  └── Subscribe EventSink.OnPositionChanged
+
+OnSceneUnload()
+  ├── Unsubscribe all events
+  ├── Save()           — writes AutoLoot.json
+  └── Instance = null  — reset singleton</div>
+
+  <h3>Event Triggers</h3>
+
+  <table>
+    <tr><th>Event</th><th>Handler</th><th>What it does</th></tr>
+    <tr><td><code>OnItemCreated</code> / <code>OnItemUpdated</code></td><td><code>OnItemCreatedOrUpdated</code></td><td>If item is in a corpse → check loot list. If ground item &amp; scavenger enabled → check loot list.</td></tr>
+    <tr><td><code>OPLOnReceive</code></td><td><code>OnOPLReceived</code></td><td>When OPL data arrives for an item in a corpse, re-check the loot list (regex matching uses OPL property text).</td></tr>
+    <tr><td><code>OnOpenContainer</code></td><td><code>OnOpenContainer</code></td><td>When player opens a container, check if it is a corpse and queue eligible items.</td></tr>
+    <tr><td><code>OnPositionChanged</code></td><td><code>OnPositionChanged</code></td><td>Re-check nearby corpses each time the player moves (handles "walked away then back" case). Scavenger scan throttled to every 500 ms.</td></tr>
+  </table>
+
+  <div class="callout info">
+    <strong>Why OnPositionChanged?</strong>
+    Without this handler, if a player opens a corpse, walks a few tiles away, then walks back, no new events fire — the items would never be looted. The position-change trigger re-evaluates all nearby corpses on each step.
+  </div>
+
+  <h3>Loot Queue</h3>
+
+  <p>Items to loot are placed into a static <code>Queue&lt;(uint item, AutoLootConfigEntry entry)&gt;</code>. The <code>Update()</code> method (called each frame from GameScene) dequeues one item per <code>MoveMultiObjectDelay</code> milliseconds, preventing item-spam rejection by the server.</p>
+
+  <pre><code><span class="cm">// Dequeue one item per delay tick</span>
+<span class="kw">if</span> (_nextLootTime > Time.Ticks) <span class="kw">return</span>;
+
+(<span class="ty">uint</span> item, AutoLootConfigEntry entry) = _lootItems.Dequeue();
+<span class="cm">// Resolve destination: entry.DestinationContainer → GrabBag → Backpack</span>
+ObjectActionQueue.Instance.Enqueue(<span class="kw">new</span> <span class="ty">MoveRequest</span>(moveItem.Serial, destinationSerial, ...).ToObjectActionQueueItem(), ActionPriority.LootItem);
+_nextLootTime = Time.Ticks + ProfileManager.CurrentProfile.MoveMultiObjectDelay;</code></pre>
+
+  <h3>AutoLootConfigEntry — Match Logic</h3>
+
+  <table>
+    <tr><th>Field</th><th>Type</th><th>How it's used</th></tr>
+    <tr><td><code>Graphic</code></td><td><code>int</code></td><td>Must match item graphic; <code>-1</code> = any graphic</td></tr>
+    <tr><td><code>Hue</code></td><td><code>ushort</code></td><td><code>ushort.MaxValue</code> = ignore hue; otherwise must match exactly</td></tr>
+    <tr><td><code>RegexSearch</code></td><td><code>string</code></td><td>If non-empty, matched against OPL name+data using <code>RegexHelper.GetRegex()</code> (cached, compiled)</td></tr>
+    <tr><td><code>DestinationContainer</code></td><td><code>uint</code></td><td>Serial of a specific container to loot into; 0 = use GrabBag or Backpack</td></tr>
+    <tr><td><code>Uid</code></td><td><code>string</code></td><td>Auto-generated <code>Guid</code>; used as stable key for removal</td></tr>
+  </table>
+
+  <h3>Human Corpse Protection</h3>
+  <p>If <code>ProfileManager.CurrentProfile.AutoLootHumanCorpses</code> is false, human (player) corpses are skipped entirely. After looting, if <code>HueCorpseAfterAutoloot</code> is true, the corpse is hued to color 73 (grey) as a visual marker.</p>
+
+  <h3>Scavenger Mode</h3>
+  <p>When <code>EnableScavenger</code> is true, ground items (not in containers, not locked, distance ≤ 3 tiles) are also checked against the loot list every 500 ms on position change. This covers ground-spawned items that are never inside a corpse.</p>
+
+  <h3>Import / Export</h3>
+  <p>AutoLoot config is saved to <code>{ProfilePath}/AutoLoot.json</code> using <code>AutoLootJsonContext</code> (source-generated). The manager supports export/import by file and by clipboard JSON, and can read configs from other character profiles for cross-character copying.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ HEALTHLINES -->
+  <h2 id="healthlines">HealthLinesManager <span class="badge">TazUO</span></h2>
+
+  <p><code>HealthLinesManager</code> renders colored HP bars above every visible mobile. It is a pure draw system — no state is owned between frames. GameScene calls <code>Draw(batcher)</code> once per frame after the world render passes.</p>
+
+  <h3>Display Modes</h3>
+
+  <table>
+    <tr><th>Profile Setting</th><th>Meaning</th></tr>
+    <tr><td><code>ShowMobilesHP = false</code></td><td>No bars drawn at all</td></tr>
+    <tr><td><code>MobileHPType = 0</code></td><td>Show only text HP labels (no graphic bar)</td></tr>
+    <tr><td><code>MobileHPType = 1</code></td><td>Show only graphic HP bar (no text)</td></tr>
+    <tr><td><code>MobileHPType = 2</code></td><td>Show both text and graphic bar</td></tr>
+    <tr><td><code>MobileHPShowWhen = 0</code></td><td>Always show</td></tr>
+    <tr><td><code>MobileHPShowWhen = 1</code></td><td>Show only when HP &lt; max</td></tr>
+    <tr><td><code>MobileHPShowWhen = 2</code></td><td>Show only when HP ≠ max (same as 1)</td></tr>
+    <tr><td><code>HealthLineSizeMultiplier</code></td><td>Scale factor; bar width = 34 × multiplier pixels</td></tr>
+  </table>
+
+  <h3>Notoriety-Colored Bars</h3>
+
+  <p>Bar fill color is derived from the mobile's <code>NotorietyFlag</code> via <code>Notoriety.GetHue()</code>. Blue = innocent, green = ally, gray = gray, orange = criminal, red = murderer. Passive targets (not last-target, not selected) are drawn at 50% alpha.</p>
+
+  <h3>New Target System Integration</h3>
+
+  <p>When <code>UseNewTargetSystem</code> is enabled and a mobile matches <code>TargetManager.NewTargetSystemSerial</code>, a special multi-gump overlay (graphic IDs <code>0x756A–0x756F</code>) is drawn centered on the mobile, sized proportionally to the mobile's animation width. This is the "target ring" visual.</p>
+
+<pre><code><span class="cm">// Select correct sized target ring gumps based on animation width</span>
+<span class="kw">if</span> (width >= <span class="nu">80</span>) { topGump = <span class="nu">0x756D</span>; bottomGump = <span class="nu">0x756A</span>; }
+<span class="kw">else if</span> (width >= <span class="nu">40</span>) { topGump = <span class="nu">0x756E</span>; bottomGump = <span class="nu">0x756B</span>; }
+<span class="kw">else</span>              { topGump = <span class="nu">0x756F</span>; bottomGump = <span class="nu">0x756C</span>; }</code></pre>
+
+  <div class="callout warn">
+    <strong>ToList() on every draw call</strong>
+    The inner loop uses <code>_world.Mobiles.Values.ToList()</code> to snapshot the collection before iterating. This prevents ConcurrentModificationException if a mobile is removed mid-frame by a network packet, but allocates a list every frame. This is the same defensive pattern used by DurabilityManager and other draw systems.
+  </div>
+
+  <h3>Viewport Clipping</h3>
+  <p>Before drawing, screen position is checked against camera bounds. Bars outside the visible viewport are skipped without rendering — no off-screen draw calls.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ GRIDHIGHLIGHT -->
+  <h2 id="gridhighlight">GridHighlightData <span class="badge">TazUO</span></h2>
+
+  <p><code>GridHighlightData</code> lives in <code>Game/UI/Gumps/GridHighLight/GridHighLightData.cs</code>. It provides property-based item highlighting: items displayed in grid containers are colored or marked when their OPL properties match a configured rule.</p>
+
+  <h3>Rule Structure</h3>
+
+  <p>Each <code>GridHighlightSetupEntry</code> (stored in <code>Profile.GridHighlightSetup</code>) defines one rule:</p>
+
+  <table>
+    <tr><th>Field</th><th>Purpose</th></tr>
+    <tr><td><code>Name</code></td><td>Human-readable rule name, shown in tooltip when <code>GridHighlightShowRuleName</code> is true</td></tr>
+    <tr><td><code>ItemNames</code></td><td>List of item names this rule applies to; empty = all items</td></tr>
+    <tr><td><code>Hue</code> / <code>HighlightColor</code></td><td>Color to render the grid cell background</td></tr>
+    <tr><td><code>Properties</code></td><td>List of <code>GridHighlightProperty</code> entries; each has property name + min/max value</td></tr>
+    <tr><td><code>AcceptExtraProperties</code></td><td>If true, item can have properties beyond the listed ones and still match</td></tr>
+    <tr><td><code>MinimumMatchingProperty</code> / <code>MaximumMatchingProperty</code></td><td>How many properties must match for the rule to fire</td></tr>
+    <tr><td><code>ExcludeNegatives</code></td><td>Property names that disqualify the item if present (e.g. "Lower Defense")</td></tr>
+  </table>
+
+  <h3>Background Matching</h3>
+
+  <p>Matching is expensive (string ops + OPL data lookup), so it runs on a background task gated by a <code>SemaphoreSlim(1, 1)</code> to prevent concurrent access to the per-rule <code>_normalizeCache</code> dictionary. Items are queued via a static <code>Queue&lt;uint&gt;</code> and consumed by the background task.</p>
+
+  <h3>Integration with Tooltip</h3>
+
+  <p><code>ToolTipOverrideManager.BuildTooltip()</code> calls <code>GridHighlightData.GetBestMatch(itemPropertiesData)</code> to find the highest-priority matching rule, then prefixes matched property lines with <code>[o]</code> to mark them in the tooltip text.</p>
+
+  <pre><code><span class="cm">// In ToolTipOverrideManager.BuildTooltip()</span>
+GridHighlightData bestMatch = ProfileManager.CurrentProfile.GridHighlightProperties
+    ? GridHighlightData.GetBestMatch(itemPropertiesData)
+    : <span class="kw">null</span>;
+
+<span class="kw">if</span> (isHighlighted)
+    finalLine = <span class="st">$"[o] {finalLine}/cd"</span>; <span class="cm">// wrap matched property in highlight markup</span></code></pre>
+
+  <!-- ═══════════════════════════════════════════════════════ DURABILITY -->
+  <h2 id="durability">DurabilityManager <span class="badge">TazUO</span></h2>
+
+  <p><code>DurabilityManager</code> parses equipment durability values from OPL tooltip data and tracks them in a <code>Dictionary&lt;uint, DurabiltyProp&gt;</code>. The <code>DurabilitysGump</code> window reads this data to render a wear bar for each equipped item.</p>
+
+  <h3>Data Flow</h3>
+
+<div class="flow">EventSink.OPLOnReceive fires
+  └── OnOPLReceive(OPLEventArgs e)
+       ├── Skip if not an Item serial
+       ├── Skip if item is destroyed
+       ├── If item is equipped on player in a tracked layer:
+       │    └── ParseDurability(serial, e.Data)
+       │         └── Regex: @"(?&lt;=Durability )(\d*) / (\d*)"
+       │              └── Returns DurabiltyProp(serial, current, max)
+       │    └── _itemLayerSlots[item.Serial] = durability
+       ├── Else: _itemLayerSlots.Remove(item.Serial)
+       └── UIManager.ForEach&lt;DurabilitysGump&gt;(g =&gt; g.RequestUpdateContents())</div>
+
+  <h3>Tracked Layers</h3>
+
+  <p>The 21 equipment layers tracked are: Cloak, Shirt, Pants, Shoes, Legs, Arms, Torso, Tunic, Ring, Bracelet, Gloves, Skirt, Robe, Waist, Necklace, Beard, Earrings, Helmet, OneHanded, TwoHanded, Talisman.</p>
+
+  <h3>The .ToList() Pattern</h3>
+
+  <p>The <code>Durabilities</code> property exposes <code>_itemLayerSlots.Values.ToList()</code>. This is a deliberate defensive snapshot — any code reading durability data gets an immutable list that won't throw if the dictionary is modified by an incoming OPL packet on the network thread.</p>
+
+  <pre><code><span class="cm">// Safe snapshot — callers can iterate without holding a lock</span>
+<span class="kw">public</span> <span class="ty">List</span>&lt;<span class="ty">DurabiltyProp</span>&gt; Durabilities => _itemLayerSlots.Values.<span class="fn">ToList</span>();</code></pre>
+
+  <h3>DurabiltyProp</h3>
+
+  <table>
+    <tr><th>Property</th><th>Type</th><th>Meaning</th></tr>
+    <tr><td><code>Serial</code></td><td><code>int</code></td><td>Item serial this durability record belongs to</td></tr>
+    <tr><td><code>Durabilty</code></td><td><code>int</code></td><td>Current durability value</td></tr>
+    <tr><td><code>MaxDurabilty</code></td><td><code>int</code></td><td>Maximum durability value</td></tr>
+    <tr><td><code>Percentage</code></td><td><code>float</code></td><td>Computed: <code>Durabilty / MaxDurabilty</code>, 0 if max is 0</td></tr>
+  </table>
+
+  <p><code>HasDurabilityData</code> is a static bool set to <code>true</code> whenever the dictionary has any entries — gumps can check this to avoid rendering an empty durability panel.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ COOLDOWN -->
+  <h2 id="cooldown">CoolDownBarManager <span class="badge">TazUO</span></h2>
+
+  <p><code>CoolDownBarManager</code> creates on-screen cooldown bar gumps when specific text messages are received. Up to 15 simultaneous cooldown bars are supported (<code>MAX_COOLDOWN_BARS = 15</code>), tracked in a static array <code>CoolDownBar[]</code>.</p>
+
+  <h3>Trigger Logic</h3>
+
+  <p>Each trigger condition is stored in the Profile as parallel lists: <code>Condition_Trigger[]</code>, <code>Condition_Duration[]</code>, <code>Condition_Label[]</code>, <code>Condition_Hue[]</code>, <code>Condition_Type[]</code>. On every <code>MessageReceived</code> event, all conditions are checked:</p>
+
+  <pre><code><span class="kw">private void</span> <span class="fn">MessageManager_MessageReceived</span>(<span class="kw">object</span> sender, <span class="ty">MessageEventArgs</span> e)
+{
+    <span class="kw">int</span> count = ProfileManager.CurrentProfile.CoolDownConditionCount;
+    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="nu">0</span>; i &lt; count; i++)
+    {
+        <span class="cm">// Condition_Type: 0=any, 1=self only, 2=others only</span>
+        <span class="kw">switch</span> (ProfileManager.CurrentProfile.Condition_Type[i]) { ... }
+
+        <span class="kw">if</span> (e.Text.<span class="fn">Contains</span>(ProfileManager.CurrentProfile.Condition_Trigger[i]))
+            <span class="fn">AddCoolDownBar</span>(World, TimeSpan.<span class="fn">FromSeconds</span>(duration), label, hue, replace);
+    }
+}</code></pre>
+
+  <h3>Bar Placement</h3>
+
+  <table>
+    <tr><th>Behavior</th><th>Detail</th></tr>
+    <tr><td>Slots 0–14</td><td>First available empty/disposed slot is used; bars stack vertically by index × (height + 5)</td></tr>
+    <tr><td>Replace mode</td><td>If <code>Condition_ReplaceIfExists[i]</code> is true and a bar with the same label exists, it is disposed and re-created in the same slot (resets timer)</td></tr>
+    <tr><td>Position</td><td>Default X/Y defined by <code>CoolDownBar.DEFAULT_X</code> / <code>DEFAULT_Y</code> constants</td></tr>
+  </table>
+
+  <div class="callout info">
+    <strong>Use case example</strong>
+    A server sends "You begin casting Explosion" as a system message. A cooldown condition triggers on that text, showing a 5-second bar labeled "Explosion." When the bar expires, the <code>CoolDownBar</code> gump disposes itself automatically.
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ WORLDDATA -->
+  <h2 id="worlddata">WorldDataManager <span class="badge">TazUO</span></h2>
+
+  <p><code>WorldDataManager</code> supports server-driven world generation: servers can send custom terrain and static data that overrides the client's UO map files. This is TazUO's procedural generation infrastructure.</p>
+
+  <h3>Components</h3>
+
+  <table>
+    <tr><th>Component</th><th>Role</th></tr>
+    <tr><td><code>WorldDataStore</code></td><td>In-memory grid of <code>WorldChunkData</code> objects, keyed by block X×mapHeight+Y</td></tr>
+    <tr><td><code>WorldDataPersistence</code></td><td>Handles <code>None</code> / <code>FileBacked</code> persistence modes; FileBacked mode saves chunks to <code>procgen/{worldId}/</code></td></tr>
+    <tr><td><code>WorldChunkData</code></td><td>64 land graphics + 64 Z values + list of <code>ServerStaticEntry</code> items for one 8×8 block</td></tr>
+  </table>
+
+  <h3>Persistence Modes</h3>
+
+  <table>
+    <tr><th>Mode</th><th>Behavior</th></tr>
+    <tr><td><code>None</code></td><td>Server data is held in RAM only; lost on logout. Used for temporary dynamic events.</td></tr>
+    <tr><td><code>FileBacked</code></td><td>Each received block is immediately flushed to disk at <code>procgen/{worldId}/</code>. On next login, chunks are loaded from disk instead of the UO map files.</td></tr>
+  </table>
+
+  <h3>Server API</h3>
+
+  <pre><code><span class="cm">// Called by packet handlers when server sends terrain data</span>
+manager.<span class="fn">ReceiveTerrainBlock</span>(blockX, blockY, graphics, zValues);
+
+<span class="cm">// Called when server sends statics for a block</span>
+manager.<span class="fn">ReceiveStaticsBlock</span>(blockX, blockY, statics);
+
+<span class="cm">// Called to drop server data and fall back to UO files</span>
+manager.<span class="fn">ReleaseBlock</span>(blockX, blockY);</code></pre>
+
+  <h3>Chunk Invalidation</h3>
+
+  <p>After storing new data, <code>InvalidateChunk()</code> looks up the corresponding <code>Chunk</code> in the live map and calls <code>Destroy()</code> on it. The map's normal chunk loading then reloads the chunk, this time finding WorldDataManager's data and using it instead of the mul file.</p>
+
+  <h3>View Tracking</h3>
+
+  <p><code>UpdateViewBounds()</code> is called by GameScene every frame after computing the viewport. When the visible block range changes, it fires <code>ViewBoundsChanged</code> — allowing server-side systems to know which blocks are visible and stream only the relevant terrain.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ NAMEOVERHEAD -->
+  <h2 id="nameoverhead">NameOverHeadManager <span class="badge">TazUO</span></h2>
+
+  <p><code>NameOverHeadManager</code> controls which entities show names floating above them. Instead of a simple on/off toggle, TazUO implements a full option set system where multiple named configurations can be defined and activated by hotkey.</p>
+
+  <h3>IsShowing State</h3>
+
+  <pre><code><span class="cm">// Three ways names can be visible</span>
+<span class="kw">public static bool</span> IsShowing =>
+    IsPermaToggled          <span class="cm">// toggled on permanently via menu/macro</span>
+    || IsTemporarilyShowing  <span class="cm">// hotkey held down</span>
+    || Keyboard.Ctrl &amp;&amp; Keyboard.Shift;  <span class="cm">// built-in Ctrl+Shift shortcut</span></code></pre>
+
+  <h3>NameOverheadOptions Flags</h3>
+
+  <p>The <code>NameOverheadOptions</code> enum is a <code>[Flags]</code> bitmask. Each <code>NameOverheadOption</code> stores an <code>int</code> bitmask of which entity types/notorieties to show:</p>
+
+  <table>
+    <tr><th>Category</th><th>Flags</th></tr>
+    <tr><td>Items</td><td>Containers, Gold, Stackable, LockedDown, Moveable, Immoveable, Other</td></tr>
+    <tr><td>Corpses</td><td>MonsterCorpses, HumanoidCorpses, OwnCorpses</td></tr>
+    <tr><td>Mobile type</td><td>Humanoid, Monster, OwnFollowers, Self, ExcludeSelf</td></tr>
+    <tr><td>Mobile notoriety</td><td>Innocent, Ally, Gray, Criminal, Enemy, Murderer, Invulnerable</td></tr>
+  </table>
+
+  <h3>Options — Named Presets</h3>
+
+  <p>Options are saved to <code>{ProfilePath}/nameoverhead.xml</code>. Default presets created on first run:</p>
+
+  <table>
+    <tr><th>Name</th><th>Flags</th></tr>
+    <tr><td>All</td><td><code>int.MaxValue</code> — everything</td></tr>
+    <tr><td>Mobiles only</td><td><code>AllMobiles</code></td></tr>
+    <tr><td>Items only</td><td><code>AllItems</code></td></tr>
+    <tr><td>Mobiles &amp; Corpses only</td><td><code>MobilesAndCorpses</code></td></tr>
+  </table>
+
+  <h3>IsAllowed() — The Filter</h3>
+
+  <p>Called by the render system for every entity being drawn. Returns <code>true</code> only if the active <code>NameOverheadOptions</code> bitmask permits the entity's type and notoriety:</p>
+
+  <pre><code><span class="kw">public bool</span> <span class="fn">IsAllowed</span>(<span class="ty">Entity</span> entity)
+{
+    <span class="kw">if</span> (<span class="ty">SerialHelper</span>.<span class="fn">IsItem</span>(entity)) <span class="kw">return</span> <span class="fn">HandleItemOverhead</span>(entity);
+    <span class="kw">if</span> (<span class="ty">SerialHelper</span>.<span class="fn">IsMobile</span>(entity)) <span class="kw">return</span> <span class="fn">HandleMobileOverhead</span>(entity);
+    <span class="kw">return false</span>;
+}</code></pre>
+
+  <h3>Hotkey Activation</h3>
+
+  <p><code>RegisterKeyDown(key, mod)</code> looks up the matching <code>NameOverheadOption</code> by key+modifiers, sets <code>ActiveOverheadOptions</code>, and sets <code>IsTemporarilyShowing = true</code>. On <code>RegisterKeyUp()</code>, <code>IsTemporarilyShowing = false</code>. This "press and hold" behavior is how the Ctrl+Shift built-in shortcut was extended to user-defined hotkeys.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ TOOLTIP -->
+  <h2 id="tooltip">ToolTipOverrideManager <span class="badge">TazUO</span></h2>
+
+  <p><code>ToolTipOverrideData</code> / <code>ToolTipOverrideManager</code> lets players define rules that reformat item tooltip text. For example, the raw line "Weapon Damage 15 to 18" can be rewritten as a colored, compact "<code>DMG /c[orange]15/cd - /c[red]18</code>".</p>
+
+  <h3>Override Rule Structure</h3>
+
+  <table>
+    <tr><th>Field</th><th>Meaning</th></tr>
+    <tr><td><code>SearchText</code></td><td>Text to match in the tooltip property line. Prefix <code>$</code> for regex matching.</td></tr>
+    <tr><td><code>FormattedText</code></td><td>Format string; <code>{0}</code>=property name, <code>{1}</code>=first value, <code>{2}</code>=second value, <code>{3}</code>=original text, <code>{4}</code>=first diff, <code>{5}</code>=second diff</td></tr>
+    <tr><td><code>Min1</code> / <code>Max1</code></td><td>Numeric range filter for the first value in the property line</td></tr>
+    <tr><td><code>Min2</code> / <code>Max2</code></td><td>Numeric range filter for the second value</td></tr>
+    <tr><td><code>ItemLayer</code></td><td><code>TooltipLayers</code> enum: Any, specific Layer enum value, or group (Body_Group, Jewelry_Group, Weapon_Group)</td></tr>
+  </table>
+
+  <h3>BuildTooltip() Pipeline</h3>
+
+<div class="flow">ProcessTooltipText(world, serial)
+  └── BuildTooltip(ItemPropertiesData)
+       ├── 1. Handle item name line
+       │    ├── Try override: SearchText matches item name → use FormattedText
+       │    └── Fallback: apply TooltipHeaderFormat from Profile
+       ├── 2. Find best GridHighlightData rule (if GridHighlightProperties=true)
+       └── 3. For each property in itemPropertiesData.singlePropertyData:
+            ├── Check if property is highlighted by GridHighlight rule
+            ├── Try override: SearchText matches property text AND values in Min/Max range
+            │    ├── Match: format with FormattedText
+            │    └── No match: use original property text
+            └── If highlighted: prefix with "[o]", suffix with "/cd"</div>
+
+  <h3>Layer Filtering</h3>
+
+  <p>Overrides can be scoped to specific equipment layers to prevent one rule from affecting multiple item types. Layer groups simplify common cases:</p>
+  <ul>
+    <li><strong>Body_Group</strong> — Shoes, Pants, Shirt, Helmet, Necklace, Arms, Gloves, Waist, Torso, Tunic, Legs, Skirt, Cloak, Robe</li>
+    <li><strong>Jewelry_Group</strong> — Talisman, Bracelet, Ring, Earrings</li>
+    <li><strong>Weapon_Group</strong> — OneHanded, TwoHanded</li>
+  </ul>
+
+  <h3>Storage in Profile</h3>
+
+  <p>Override settings are stored as <em>parallel lists</em> in the Profile JSON (not a list of objects). <code>ToolTipOverride_SearchText[i]</code>, <code>ToolTipOverride_NewFormat[i]</code>, <code>ToolTipOverride_MinVal1[i]</code>, etc., all share the same index. <code>ToolTipOverrideData.Get(index)</code> assembles these into a transient object on demand.</p>
+
+  <div class="callout warn">
+    <strong>Cache invalidation required</strong>
+    <code>ToolTipOverrideData</code> maintains a <code>_cachedOverrides</code> array keyed by count. After any <code>Save()</code> or <code>Delete()</code>, <code>InvalidateCache()</code> must be called so the next <code>GetAllToolTipOverrides()</code> rebuilds the array. Forgetting this results in stale override data being shown.
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ SPELLBAR -->
+  <h2 id="spellbar">SpellBarManager <span class="badge">TazUO</span></h2>
+
+  <p><code>SpellBarManager</code> is a static class that maintains a configurable grid of spell shortcuts ("spell bar") supporting keyboard hotkeys and game controller buttons.</p>
+
+  <h3>Data Model</h3>
+
+  <table>
+    <tr><th>Type</th><th>Role</th></tr>
+    <tr><td><code>SpellBarRow</code></td><td>10 spell slots; stores spell IDs as <code>int[]</code> for serialization, exposes <code>SpellDefinition[]</code> lazily</td></tr>
+    <tr><td><code>SpellBarRows</code></td><td>Static <code>List&lt;SpellBarRow&gt;</code>; multiple rows allow different loadouts</td></tr>
+    <tr><td><code>SpellBarSettings</code></td><td>Enabled flag, hotkey mappings (SDL keycodes + modifiers), and controller button combos for each slot</td></tr>
+    <tr><td><code>CurrentRow</code></td><td>Active row index; can be switched via UI to change which loadout is active</td></tr>
+  </table>
+
+  <h3>Key Matching</h3>
+
+  <p>On <code>KeyPress(key, mod)</code>, left/right modifier variants are normalized to generic (e.g. <code>SDL_KMOD_LCTRL</code> + <code>SDL_KMOD_RCTRL</code> → <code>SDL_KMOD_CTRL</code>). This ensures bindings work regardless of which physical key is pressed.</p>
+
+  <h3>Persistence</h3>
+  <p>Saved to <code>{ProfilePath}/SpellBar.json</code> and <code>{ProfilePath}/SpellBarSettings.json</code> using source-generated JSON contexts. Presets (per-row saved configurations) are stored in <code>Data/SpellBarPresets/</code> as individual JSON files.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ OTHER -->
+  <h2 id="other">Other Notable TazUO Managers</h2>
+
+  <table>
+    <tr><th>Manager</th><th>File</th><th>Purpose</th></tr>
+    <tr><td><code>GlobalActionCooldown</code></td><td><code>GlobalActionCooldown.cs</code></td><td>Static throttle: <code>IsOnCooldown</code> / <code>BeginCooldown()</code>. Duration = <code>Profile.MoveMultiObjectDelay</code>. Used by AutoLoot and other action queues to space out actions.</td></tr>
+    <tr><td><code>ActiveSpellIconsManager</code></td><td><code>ActiveIconsManager.cs</code></td><td>Tracks which spell icon IDs are currently "active" (e.g., toggle spells). Backed by a <code>HashSet&lt;ushort&gt;</code>.</td></tr>
+    <tr><td><code>DressAgentManager</code></td><td><code>DressAgentManager.cs</code></td><td>Saves/restores equipment sets. Drag-to-dress from a saved outfit profile.</td></tr>
+    <tr><td><code>OrganizerAgent</code></td><td><code>OrganizerAgent.cs</code></td><td>Batch-moves items matching type/hue rules from a container to another; an early forerunner of AutoLoot.</td></tr>
+    <tr><td><code>BuySellAgent</code></td><td><code>BuySellAgent.cs</code></td><td>Automates vendor buying/selling for configured item types.</td></tr>
+    <tr><td><code>FriendsListManager</code></td><td><code>FriendsListManager.cs</code></td><td>Maintains a named list of "friend" serials; used by HealthLines and NameOverHead to differentiate allies.</td></tr>
+    <tr><td><code>GridContainerSaveData</code></td><td><code>GridContainerSaveData.cs</code></td><td>Saves per-container grid layout (columns, item positions) keyed by container serial.</td></tr>
+    <tr><td><code>TitleBarStatsManager</code></td><td><code>TitleBarStatsManager.cs</code></td><td>Displays player stat values in the window title bar (HP, Mana, Stamina).</td></tr>
+    <tr><td><code>MapWebServerManager</code></td><td><code>MapWebServerManager.cs</code></td><td>Hosts a local HTTP server serving the world map as tiles; enables browser-based mapping tools.</td></tr>
+    <tr><td><code>SQLSettingsManager</code></td><td><code>SQLSettingsManager.cs</code></td><td>Alternative settings backend using SQLite for character data.</td></tr>
+    <tr><td><code>ForcedTooltipManager</code></td><td><code>ForcedTooltipManager.cs</code></td><td>Forces tooltip display on items that don't have server-provided OPL data.</td></tr>
+    <tr><td><code>ItemDatabaseManager</code></td><td><code>ItemDatabaseManager.cs</code></td><td>Local SQLite cache of item properties seen during the session for fast offline lookup.</td></tr>
+    <tr><td><code>AuraManager</code></td><td><code>AuraManager.cs</code></td><td>Draws colored aura circles around mobiles based on notoriety or friend status.</td></tr>
+    <tr><td><code>BandageManager</code></td><td><code>BandageManager.cs</code></td><td>Tracks bandage application timer and displays countdown.</td></tr>
+    <tr><td><code>HideHudManager</code></td><td><code>HideHudManager.cs</code></td><td>Hides all UI gumps on a keypress for screenshots.</td></tr>
+    <tr><td><code>TileMarkerManager</code></td><td><code>TileMarkerManager.cs</code></td><td>Lets players mark specific world coordinates with colored tiles.</td></tr>
+  </table>
+
+  <!-- ═══════════════════════════════════════════════════════ PATTERNS -->
+  <h2 id="patterns">TazUO-Specific Patterns</h2>
+
+  <p>TazUO managers share several implementation patterns that distinguish them from ClassicUO's original managers:</p>
+
+  <h3>1. EventSink-First Architecture</h3>
+
+  <p>TazUO managers subscribe to <code>EventSink</code> events rather than polling every frame. <code>AutoLootManager</code> subscribes to 4 events; <code>DurabilityManager</code> subscribes to 1. This is more efficient and ensures the feature only runs when something actually happens.</p>
+
+  <table>
+    <tr><th>Pattern</th><th>ClassicUO style</th><th>TazUO style</th></tr>
+    <tr><td>Update trigger</td><td><code>Update()</code> called every frame</td><td><code>EventSink</code> subscription fires on data change</td></tr>
+    <tr><td>Collection iteration</td><td>Direct iteration, occasional unsafe</td><td><code>.ToList()</code> snapshot before iterating across any collection that network packets might modify</td></tr>
+    <tr><td>Save format</td><td>XML</td><td>JSON with source-generated <code>JsonSerializerContext</code></td></tr>
+    <tr><td>Singleton pattern</td><td>Static readonly fields</td><td><code>static Instance { get { field ??= new(); return field; } }</code> with reset on unload</td></tr>
+    <tr><td>Load timing</td><td>Synchronous in constructor</td><td><code>Task.Factory.StartNew()</code> for async load (AutoLoot); <code>_loaded</code> guard prevents processing before load completes</td></tr>
+  </table>
+
+  <h3>2. Source-Generated JSON Serialization</h3>
+
+  <p>Every manager that persists data uses a <code>[JsonSerializable]</code>-annotated <code>JsonSerializerContext</code> subclass. This is <strong>required</strong> for .NET NativeAOT/trimming compatibility and is enforced project-wide:</p>
+
+  <pre><code><span class="cm">// Correct pattern</span>
+[JsonSerializable(<span class="kw">typeof</span>(<span class="ty">AutoLootManager.AutoLootConfigEntry</span>))]
+[JsonSerializable(<span class="kw">typeof</span>(<span class="ty">List</span>&lt;<span class="ty">AutoLootManager.AutoLootConfigEntry</span>&gt;))]
+[JsonSourceGenerationOptions(WriteIndented = <span class="kw">true</span>)]
+<span class="kw">public partial class</span> <span class="ty">AutoLootJsonContext</span> : <span class="ty">JsonSerializerContext</span> { }
+
+<span class="cm">// Usage</span>
+JsonHelper.<span class="fn">Load</span>(path, AutoLootJsonContext.Default.ListAutoLootConfigEntry, <span class="kw">out</span> _autoLootItems);</code></pre>
+
+  <div class="callout danger">
+    <strong>Never use reflection-based JSON</strong>
+    <code>JsonSerializer.Serialize(obj)</code> without a type context will compile but fail at runtime in trimmed/NativeAOT builds. Always use the context: <code>JsonSerializer.Serialize(obj, MyContext.Default.MyType)</code>.
+  </div>
+
+  <h3>3. The ObjectActionQueue Pattern</h3>
+
+  <p>TazUO managers that send game actions (move item, use item, etc.) go through <code>ObjectActionQueue.Instance.Enqueue()</code> rather than calling <code>GameActions.*</code> directly. This queue enforces action spacing and priority:</p>
+
+  <table>
+    <tr><th>Priority</th><th>Used by</th></tr>
+    <tr><td><code>ActionPriority.LootItem</code></td><td>AutoLootManager</td></tr>
+    <tr><td><code>ActionPriority.Normal</code></td><td>Most user interactions</td></tr>
+    <tr><td><code>ActionPriority.High</code></td><td>Critical actions (combat target)</td></tr>
+  </table>
+
+  <h3>4. Profile as the Configuration Store</h3>
+
+  <p>Where ClassicUO managers often had their own config files, TazUO managers increasingly store their settings directly in the per-character <code>Profile</code>. This simplifies the persistence story (one JSON file per character) but makes the Profile extremely large (~500 properties).</p>
+
+  <p>The exception is data that is too large or independently useful: <code>AutoLoot.json</code>, <code>nameoverhead.xml</code>, and <code>SpellBar.json</code> remain separate files.</p>
+
+  <h3>5. Async Load with Guard Flag</h3>
+
+  <p><code>AutoLootManager</code> illustrates a pattern used for heavy loads: start an async task, set <code>_loaded = true</code> when done, and guard all processing methods with <code>if (!_loaded) return;</code>. This prevents the manager from acting on events before its config is ready.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ FORWARD -->
+  <h2 id="forward">Going Forward</h2>
+
+  <h3>Adding a New TazUO Feature Manager</h3>
+
+  <ol>
+    <li><strong>Create the class</strong> in <code>Game/Managers/</code>. Use constructor injection for <code>World</code>.</li>
+    <li><strong>Register in <code>World</code></strong> as a property. World is re-instantiated on each login, so all managers are fresh.</li>
+    <li><strong>Subscribe events in <code>OnSceneLoad()</code></strong>, unsubscribe in <code>OnSceneUnload()</code>. Never subscribe in the constructor — the scene may not exist yet.</li>
+    <li><strong>Use source-generated JSON</strong> for any persistence. Add a <code>[JsonSerializable]</code> context class next to the data class.</li>
+    <li><strong>Use <code>ObjectActionQueue</code></strong> for any game actions, never call <code>GameActions.*</code> from a tight loop or event handler directly.</li>
+    <li><strong>Snapshot collections before iterating</strong> — any collection that a network thread might modify must be snapshotted with <code>.ToList()</code> or a lock before iteration.</li>
+  </ol>
+
+  <h3>Safe Patterns Summary</h3>
+
+  <table>
+    <tr><th>Do</th><th>Don't</th></tr>
+    <tr><td><code>foreach (var x in collection.ToList())</code></td><td><code>foreach (var x in collection)</code> if network can modify it</td></tr>
+    <tr><td><code>JsonSerializer.Serialize(data, MyCtx.Default.MyType)</code></td><td><code>JsonSerializer.Serialize(data)</code> bare — fails at trim time</td></tr>
+    <tr><td>Subscribe <code>EventSink.*</code> in <code>OnSceneLoad</code></td><td>Subscribe in constructor — scene not loaded yet</td></tr>
+    <tr><td>Guard heavy ops with <code>if (!_loaded) return</code></td><td>Process events before async load completes</td></tr>
+    <tr><td><code>ObjectActionQueue.Instance.Enqueue()</code> for actions</td><td>Call <code>GameActions.PickUpItem()</code> directly from event handlers</td></tr>
+    <tr><td><code>RegexHelper.GetRegex(pattern)</code> for regex</td><td><code>new Regex(pattern)</code> — wastes memory on repeated patterns</td></tr>
+  </table>
+
+  <div class="nav-page-links">
+    <a href="05-managers-core.html">← 05: Core Managers</a>
+    <a href="index.html">↑ Index</a>
+    <a href="07-ui-controls.html">07: UI Controls →</a>
+  </div>
+</main>
+
+</body>
+</html>

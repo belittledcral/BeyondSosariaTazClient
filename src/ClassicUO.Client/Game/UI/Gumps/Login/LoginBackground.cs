@@ -1,7 +1,12 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.Game.UI.Controls;
+using ClassicUO.Renderer;
+using ClassicUO.Resources;
 using ClassicUO.Utility;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using System.IO;
 
 namespace ClassicUO.Game.UI.Gumps.Login
 {
@@ -9,45 +14,12 @@ namespace ClassicUO.Game.UI.Gumps.Login
     {
         public LoginBackground(World world) : base(world, 0, 0)
         {
-            if (Client.Game.UO.Version >= ClientVersion.CV_706400)
+            // Always use embedded Sosaria branding instead of gumpart.mul artwork
+            Add(new EmbeddedLoginImage(640, 480) { AcceptKeyboardInput = false });
+
+            // Keep the Quit button from the classic layout on older clients
+            if (Client.Game.UO.Version < ClientVersion.CV_706400)
             {
-                // Background
-                Add
-                (
-                    new GumpPicTiled
-                    (
-                        0,
-                        0,
-                        640,
-                        480,
-                        0x0150
-                    ) { AcceptKeyboardInput = false }
-                );
-
-                // UO Flag
-                Add(new GumpPic(0, 4, 0x0151, 0) { AcceptKeyboardInput = false });
-            }
-            else
-            {
-                // Background
-                Add
-                (
-                    new GumpPicTiled
-                    (
-                        0,
-                        0,
-                        640,
-                        480,
-                        0x0E14
-                    ) { AcceptKeyboardInput = false }
-                );
-
-                // Border
-                Add(new GumpPic(0, 0, 0x157C, 0) { AcceptKeyboardInput = false });
-                // UO Flag
-                Add(new GumpPic(0, 4, 0x15A0, 0) { AcceptKeyboardInput = false });
-
-                // Quit Button
                 Add
                 (
                     new Button(0, 0x1589, 0x158B, 0x158A)
@@ -59,7 +31,6 @@ namespace ClassicUO.Game.UI.Gumps.Login
                     }
                 );
             }
-
 
             CanCloseWithEsc = false;
             CanCloseWithRightClick = false;
@@ -79,5 +50,38 @@ namespace ClassicUO.Game.UI.Gumps.Login
         }
 
         public override void OnButtonClick(int buttonID) => Client.Game.Exit();
+
+        private sealed class EmbeddedLoginImage : Control
+        {
+            private Texture2D _texture;
+            private Vector3 _hue;
+
+            public EmbeddedLoginImage(int width, int height)
+            {
+                Width = width;
+                Height = height;
+                _hue = ShaderHueTranslator.GetHueVector(0, false, 1f);
+            }
+
+            public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+            {
+                if (_texture == null)
+                {
+                    byte[] bytes = Loader.GetLoginBackground().ToArray();
+                    using var ms = new MemoryStream(bytes);
+                    _texture = Texture2D.FromStream(Client.Game.GraphicsDevice, ms);
+                }
+
+                batcher.Draw(_texture, new Rectangle(x, y, Width, Height), _texture.Bounds, _hue);
+                return true;
+            }
+
+            public override void Dispose()
+            {
+                _texture?.Dispose();
+                _texture = null;
+                base.Dispose();
+            }
+        }
     }
 }

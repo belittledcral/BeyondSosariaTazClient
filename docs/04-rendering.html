@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TazUO — 04: Rendering Pipeline</title>
+  <style>
+    :root {
+      --bg:#0f1117;--surface:#181c27;--card:#1e2233;--border:#2a3050;
+      --accent:#4f8ef7;--accent2:#7c5cfc;--good:#3ecf8e;--warn:#f5a623;
+      --bad:#e05252;--text:#cdd6f4;--muted:#7480a0;--code-bg:#12151f;
+      --code-key:#cba6f7;--code-str:#a6e3a1;--code-num:#fab387;
+      --code-cmt:#585b75;--code-typ:#89dceb;--code-fn:#89b4fa;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.65}
+    a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+    .page{display:flex;min-height:100vh}
+    nav{width:270px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:28px 0;position:sticky;top:0;height:100vh;overflow-y:auto}
+    main{flex:1;padding:48px 56px;max-width:1000px}
+    @media(max-width:860px){.page{flex-direction:column}nav{width:100%;height:auto;position:static}main{padding:28px 20px}}
+    .nav-logo{font-size:1.1rem;font-weight:700;color:var(--accent);padding:0 24px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+    .nav-logo .badge{font-size:0.65rem;background:var(--accent2);color:#fff;padding:2px 7px;border-radius:99px;font-weight:600;letter-spacing:.04em}
+    .nav-section{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding:20px 24px 6px}
+    nav ul{list-style:none}
+    nav ul li a{display:block;padding:6px 24px;font-size:0.9rem;color:var(--muted);border-left:3px solid transparent;transition:all .15s}
+    nav ul li a:hover,nav ul li a.active{color:var(--text);border-left-color:var(--accent);background:rgba(79,142,247,.06);text-decoration:none}
+    h1{font-size:2.2rem;font-weight:800;line-height:1.2;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px}
+    .subtitle{color:var(--muted);font-size:1.05rem;margin-bottom:36px}
+    h2{font-size:1.55rem;font-weight:700;color:#e0e6ff;margin:56px 0 14px;padding-top:12px;border-top:1px solid var(--border)}
+    h2:first-of-type{border-top:none;margin-top:0}
+    h3{font-size:1.15rem;font-weight:700;color:var(--accent);margin:32px 0 10px}
+    h4{font-size:0.95rem;font-weight:700;color:var(--code-typ);margin:20px 0 8px;text-transform:uppercase;letter-spacing:.06em}
+    p{margin-bottom:14px}ul,ol{padding-left:22px;margin-bottom:14px}li{margin-bottom:4px}
+    strong{color:#e0e6ff}
+    .callout{border-left:4px solid;border-radius:0 8px 8px 0;padding:14px 18px;margin:18px 0;font-size:0.94rem}
+    .callout.info{border-color:var(--accent);background:rgba(79,142,247,.08)}
+    .callout.good{border-color:var(--good);background:rgba(62,207,142,.08)}
+    .callout.warn{border-color:var(--warn);background:rgba(245,166,35,.08)}
+    .callout.danger{border-color:var(--bad);background:rgba(224,82,82,.08)}
+    .callout .label{font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+    .callout.info .label{color:var(--accent)}.callout.good .label{color:var(--good)}
+    .callout.warn .label{color:var(--warn)}.callout.danger .label{color:var(--bad)}
+    pre{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:20px;overflow-x:auto;margin:14px 0 20px;font-size:0.87rem;line-height:1.6}
+    code{font-family:'Cascadia Code','Fira Code','Consolas',monospace}
+    p code,li code{background:var(--code-bg);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:0.86em;color:var(--code-typ)}
+    .kw{color:var(--code-key)}.ty{color:var(--code-typ)}.fn{color:var(--code-fn)}
+    .st{color:var(--code-str)}.nm{color:var(--code-num)}.cm{color:var(--code-cmt);font-style:italic}
+    .hl{background:rgba(79,142,247,.15);display:block;margin:0 -20px;padding:0 20px}
+    .flow{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:24px 28px;margin:14px 0 20px;font-family:monospace;font-size:0.88rem;line-height:1.9;white-space:pre;overflow-x:auto}
+    table{width:100%;border-collapse:collapse;margin:14px 0 20px;font-size:0.9rem}
+    th{background:var(--card);color:var(--accent);font-size:0.78rem;text-transform:uppercase;letter-spacing:.07em;padding:10px 14px;text-align:left;border-bottom:2px solid var(--border)}
+    td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+    tr:last-child td{border-bottom:none}tr:hover td{background:rgba(255,255,255,.02)}td code{font-size:0.83rem}
+    .file{display:inline-block;background:#1a1f35;border:1px solid var(--border);border-radius:6px;padding:2px 10px;font-family:monospace;font-size:0.8rem;color:var(--code-fn);margin:2px 2px}
+    .doc-nav{display:flex;justify-content:space-between;align-items:center;margin-top:60px;padding-top:24px;border-top:1px solid var(--border);font-size:0.9rem}
+    .doc-nav a{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 18px;font-weight:600;transition:border-color .15s}
+    .doc-nav a:hover{border-color:var(--accent);text-decoration:none}
+    hr{border:none;border-top:1px solid var(--border);margin:40px 0}
+  </style>
+</head>
+<body>
+<div class="page">
+<nav>
+  <div class="nav-logo">TazUO Docs <span class="badge">04</span></div>
+  <div class="nav-section">This Document</div>
+  <ul>
+    <li><a href="#overview">Pipeline overview</a></li>
+    <li><a href="#render-lists">The 4 render lists</a></li>
+    <li><a href="#sorting">Isometric depth sorting</a></li>
+    <li><a href="#tnext">TNext tile traversal</a></li>
+    <li><a href="#batcher">UltimaBatcher2D</a></li>
+    <li><a href="#camera">Camera &amp; viewport</a></li>
+    <li><a href="#draw-passes">Draw passes</a></li>
+    <li><a href="#assets">Asset loaders</a></li>
+    <li><a href="#performance">Performance notes</a></li>
+    <li><a href="#going-forward">Going forward</a></li>
+  </ul>
+  <div class="nav-section">All Documents</div>
+  <ul>
+    <li><a href="index.html">Index</a></li>
+    <li><a href="01-architecture.html">01 Architecture</a></li>
+    <li><a href="02-gameobjects.html">02 Game Objects</a></li>
+    <li><a href="03-network.html">03 Network</a></li>
+    <li><a href="04-rendering.html" class="active">04 Rendering</a></li>
+    <li><a href="05-managers-core.html">05 Core Managers</a></li>
+    <li><a href="06-managers-tazuo.html">06 TazUO Managers</a></li>
+    <li><a href="07-ui-controls.html">07 UI Controls</a></li>
+    <li><a href="08-ui-gumps.html">08 UI Gumps</a></li>
+    <li><a href="09-scripting.html">09 Scripting</a></li>
+  </ul>
+</nav>
+
+<main>
+<h1>Rendering Pipeline</h1>
+<p class="subtitle">
+  How TazUO converts world-state into pixels: the four render lists, isometric depth sorting,
+  TNext tile traversal, the UltimaBatcher2D sprite batcher, camera math, and how UO asset
+  files are loaded and cached.
+</p>
+
+<!-- ─────────────────────── OVERVIEW ─────────────────────── -->
+<h2 id="overview">Pipeline Overview</h2>
+
+<p>
+  TazUO renders a 2D isometric world using FNA's <code>GraphicsDevice</code>. There is no
+  Z-buffer — draw order is determined entirely by the tile traversal order, and must never
+  be changed by sorting by texture. The pipeline runs entirely on the main thread.
+</p>
+
+<div class="flow">GameController.Draw(GameTime)
+  │
+  └─ GameScene.Draw(UltimaBatcher2D batcher)
+        │
+        ├─ PHASE 1 — Sort &amp; populate render lists
+        │    GameScene.SortAndAddToRenderList()
+        │      └─ for each visible tile column (NW→SE diagonal sweep):
+        │           AddTileToRenderList(x, y, maxZ)
+        │             └─ walk TNext linked list at chunk.Tiles[x%8, y%8]
+        │                 → classify each object into one of 4 lists
+        │
+        ├─ PHASE 2 — Render to _worldRenderTarget
+        │    batcher.Begin(...)
+        │    DrawRenderList(_renderListStatics)        ← terrain + static tiles
+        │    DrawRenderList(_renderListAnimations)     ← mobiles + items on ground
+        │    DrawRenderList(_renderListEffects)        ← spell effects, particles
+        │    DrawRenderList(_renderListTransparentObjects) ← semi-transparent objects
+        │    batcher.End()
+        │
+        ├─ PHASE 3 — Apply lighting
+        │    Render lights to _lightRenderTarget
+        │    Composite with darkness blend mode
+        │
+        ├─ PHASE 4 — Post-process &amp; composite to backbuffer
+        │    Apply XBR / post-processing effect (if enabled)
+        │    Draw _worldRenderTarget scaled to screen
+        │
+        └─ UIManager.Draw(batcher)   ← gumps drawn on top of world</div>
+
+<div class="callout danger">
+  <div class="label">Immutable draw order</div>
+  The isometric renderer relies on <strong>painter's algorithm</strong> — objects are drawn
+  back-to-front, with objects farther from the camera drawn first. This order is determined
+  by the NW→SE tile sweep and the TNext list order within each tile. You <strong>must never</strong>
+  sort the render lists by texture, sprite sheet, or any other criterion. Doing so will break
+  visual layering (objects will appear to float or be buried underground).
+</div>
+
+<!-- ─────────────────────── RENDER LISTS ─────────────────────── -->
+<h2 id="render-lists">The Four Render Lists</h2>
+
+<p>
+  Objects collected during tile traversal are classified into one of four
+  <code>List&lt;GameObject&gt;</code> instances maintained as fields of <code>GameScene</code>:
+</p>
+
+<table>
+  <thead><tr><th>List</th><th>Contents</th><th>Why separate?</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>_renderListStatics</code></td>
+      <td>Land tiles, Static world decorations, non-animated Items, Multi pieces</td>
+      <td>Opaque geometry drawn first; texture atlased for batch efficiency</td>
+    </tr>
+    <tr>
+      <td><code>_renderListAnimations</code></td>
+      <td>Mobiles (players, NPCs, monsters), animated Items</td>
+      <td>Need animation frame lookup from Animations loader each draw; separate pass allows animation state update</td>
+    </tr>
+    <tr>
+      <td><code>_renderListEffects</code></td>
+      <td>Spell effects, projectiles, particle systems, lightning</td>
+      <td>Drawn above animations; often use additive or alpha blending separate from world objects</td>
+    </tr>
+    <tr>
+      <td><code>_renderListTransparentObjects</code></td>
+      <td>Foliage being faded, objects with <code>AlphaHue &lt; 255</code>, roofs being hidden</td>
+      <td>Require alpha blending — must be drawn after all opaque objects in correct back-to-front order</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  The lists are cleared at the start of each frame and repopulated by <code>AddTileToRenderList()</code>.
+  Objects with <code>AllowedToDraw == false</code> or <code>IsDestroyed == true</code> are
+  skipped during classification.
+</p>
+
+<!-- ─────────────────────── SORTING ─────────────────────── -->
+<h2 id="sorting">Isometric Depth Sorting</h2>
+
+<p>
+  Ultima Online uses a classic isometric projection where "north-west" is the top of the screen
+  and "south-east" is the bottom. To achieve correct painter's algorithm ordering, tiles must
+  be visited in the order that their projected pixels appear from the back of the scene to the front.
+</p>
+
+<div class="flow">World tile axes:
+  X → east, Y → south
+
+  Projected to screen:
+  screenX = (x - y) * TILE_SIZE_HALF    (horizontal position)
+  screenY = (x + y) * TILE_SIZE_HALF    (vertical position, before Z offset)
+  screenY -= z * 4                       (Z height adjustment)
+
+Tile draw order — diagonal column sweep (NW→SE):
+  For diagonal d = 0 to maxD:
+    For each tile on diagonal d where x - y == d (constant):
+       visit tile (x, y) — tiles to NW of player are visited before tiles to SE
+
+  Objects within the same tile cell are ordered by:
+    1. Z value (lower Z → drawn first, higher Z on top)
+    2. Object type priority (Land &lt; Static &lt; Item &lt; Mobile)</div>
+
+<h3>Why You Cannot Sort by Texture</h3>
+<p>
+  A common optimisation in 2D games is to sort draw calls by texture to reduce GPU state
+  changes (texture switches). This is <strong>impossible</strong> in TazUO because:
+</p>
+<ul>
+  <li>The art atlas is not fully deterministic — sprites from different tile types land on different textures.</li>
+  <li>Reordering any two sprites that share a screen-space overlap would show through incorrectly.</li>
+  <li>Even tiles that appear non-overlapping at low zoom levels overlap at higher zoom or in tall structures.</li>
+</ul>
+
+<p>
+  The only performance lever for batching is reducing the number of texture switches within
+  each render list — which is why the four lists exist (statics are mostly atlas-batched;
+  animations always require individual texture lookups).
+</p>
+
+<!-- ─────────────────────── TNEXT ─────────────────────── -->
+<h2 id="tnext">TNext Linked-List Traversal</h2>
+
+<p>
+  Every tile cell in a <code>Chunk</code> holds the head of a singly-linked list of
+  <code>GameObject</code> instances via the <code>TNext</code> property (from <code>LinkedObject</code>).
+  The render code walks this list for every tile in the view frustum.
+</p>
+
+<pre><code><span class="cm">// Classic TNext traversal pattern (from GameSceneDrawingSorting.cs)</span>
+<span class="kw">for</span> (
+    <span class="ty">GameObject</span> obj = chunk.<span class="fn">GetHeadObject</span>(x, y), _tnext = <span class="kw">null</span>;
+    obj != <span class="kw">null</span>;
+    obj = _tnext
+)
+{
+    _tnext = obj.TNext;   <span class="cm">// capture BEFORE any operation that might modify the list</span>
+
+    <span class="kw">if</span> (obj.IsDestroyed)  <span class="cm">// guard — object may have been destroyed mid-frame</span>
+        <span class="kw">continue</span>;
+
+    <span class="cm">// classify obj into one of the 4 render lists</span>
+    <span class="fn">AddToRenderList</span>(obj);
+}</code></pre>
+
+<div class="callout warn">
+  <div class="label">Always capture TNext first</div>
+  The pattern <code>_tnext = obj.TNext</code> before any processing is critical. If processing
+  modifies the linked list (e.g. removing a destroyed object), reading <code>TNext</code>
+  after modification would give the wrong next node or null-deref. Capture it immediately
+  after entering the loop body.
+</div>
+
+<!-- ─────────────────────── BATCHER ─────────────────────── -->
+<h2 id="batcher">UltimaBatcher2D — The Sprite Batcher</h2>
+
+<p>
+  <span class="file">src/ClassicUO.Renderer/Batcher2D.cs</span> — <code>UltimaBatcher2D</code>
+  is the only path to the GPU. Every sprite drawn to the world goes through its
+  <code>Draw*()</code> overloads. It buffers up to <code>MAX_SPRITES = 0x800</code> (2048)
+  sprites per batch before flushing to the GPU.
+</p>
+
+<pre><code><span class="cm">// Core internal state</span>
+<span class="kw">private const int</span> MAX_SPRITES  = <span class="nm">0x800</span>;   <span class="cm">// 2048 sprites max per batch</span>
+<span class="kw">private const int</span> MAX_VERTICES = MAX_SPRITES * <span class="nm">4</span>;
+<span class="kw">private const int</span> MAX_INDICES  = MAX_SPRITES * <span class="nm">6</span>;
+
+<span class="ty">DynamicVertexBuffer</span> _vertexBuffer;     <span class="cm">// GPU vertex buffer</span>
+<span class="ty">IndexBuffer</span>         _indexBuffer;      <span class="cm">// pre-filled with quad indices</span>
+<span class="ty">Texture2D</span>[]         _textureInfo;      <span class="cm">// one per sprite in batch</span>
+<span class="ty">PositionNormalTextureColor4</span>[] _vertexInfo; <span class="cm">// 4 verts per sprite</span>
+<span class="kw">private int</span>         _numSprites;       <span class="cm">// current fill count</span></code></pre>
+
+<h3>Flush Triggers</h3>
+<p>The batcher flushes (submits to GPU) when:</p>
+<ul>
+  <li>The sprite count reaches <code>MAX_SPRITES</code> (2048)</li>
+  <li>The texture changes (UO sprites are not all on the same atlas)</li>
+  <li><code>End()</code> is called at the end of a draw pass</li>
+  <li>Blend state, sampler, or effect changes (pass state change)</li>
+</ul>
+
+<h3>Custom UO Effect</h3>
+<p>
+  <code>UltimaBatcher2D</code> uses <code>BasicUOEffect</code> — a custom shader that takes
+  a <strong>hue vector</strong> <code>(hueIndex, shaderMode, alpha)</code> as vertex data.
+  The GPU samples the hue texture (loaded into <code>GraphicsDevice.Textures[1]</code>) to
+  colorize sprites without CPU-side pixel manipulation.
+</p>
+
+<table>
+  <thead><tr><th>ShaderMode</th><th>Effect</th></tr></thead>
+  <tbody>
+    <tr><td><code>SHADER_NONE</code></td><td>No hue applied — raw sprite colours</td></tr>
+    <tr><td><code>SHADER_HUED</code></td><td>Apply hue from hue texture (most world objects)</td></tr>
+    <tr><td><code>SHADER_PARTIAL_HUED</code></td><td>Hue only non-black pixels (equipment on mobiles)</td></tr>
+    <tr><td><code>SHADER_LAND</code></td><td>Land tile rendering with texture blending</td></tr>
+    <tr><td><code>SHADER_LIGHTS</code></td><td>Light rendering pass</td></tr>
+    <tr><td><code>SHADER_TEXT_HUE</code></td><td>Text rendering with colour override</td></tr>
+  </tbody>
+</table>
+
+<!-- ─────────────────────── CAMERA ─────────────────────── -->
+<h2 id="camera">Camera &amp; Viewport</h2>
+
+<p>
+  <span class="file">src/ClassicUO.Renderer/Camera.cs</span> manages the view matrix, zoom
+  level, and optional "peek" mode where the camera pans toward the mouse cursor.
+</p>
+
+<table>
+  <thead><tr><th>Property</th><th>Type</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>Bounds</code></td><td><code>Rectangle</code></td><td>Pixel rectangle of the game viewport within the window</td></tr>
+    <tr><td><code>Zoom</code></td><td><code>float</code></td><td>Scale factor (clamped to ZoomMin–ZoomMax). 1.0 = native UO pixel size</td></tr>
+    <tr><td><code>ZoomStep</code></td><td><code>float</code></td><td>How much each zoom in/out changes the zoom level (default 0.1)</td></tr>
+    <tr><td><code>Offset</code></td><td><code>Vector2</code></td><td>Lerped camera offset; smoothly follows the player or peek direction</td></tr>
+    <tr><td><code>PeekingToMouse</code></td><td><code>bool</code></td><td>When true, camera offset lerps toward the cursor (up to MAX_PEEK_DISTANCE = 250px)</td></tr>
+    <tr><td><code>ViewTransformMatrix</code></td><td><code>Matrix</code></td><td>Combined translation + scale matrix; passed to the batcher's Begin() call</td></tr>
+  </tbody>
+</table>
+
+<p>
+  The camera's <code>Update(force, timeDelta, mousePos)</code> method is called each frame.
+  When peeking, the offset lerps toward the mouse direction at a rate proportional to
+  distance, providing a smooth "look ahead" effect.
+</p>
+
+<h3>Coordinate Spaces</h3>
+
+<div class="flow">World tile (x, y, z)
+  ↓ isometric projection
+Screen pixel (screenX, screenY) in world render target space
+  ↓ Camera.ViewTransformMatrix (zoom + offset)
+Viewport pixel (viewX, viewY) in the game window
+  ↓ RenderScale (GameController.SetScale)
+Final backbuffer pixel for display</div>
+
+<p>
+  The <code>GameScene</code> maintains <code>_minPixel</code> and <code>_maxPixel</code>
+  vectors that define the frustum of visible tiles at the current zoom and offset.
+  Only tiles whose projected positions fall within this range are visited by the
+  tile sweep.
+</p>
+
+<!-- ─────────────────────── DRAW PASSES ─────────────────────── -->
+<h2 id="draw-passes">Draw Passes in Detail</h2>
+
+<h3>Pass 1 — World Render Target</h3>
+<p>
+  The world is rendered into <code>_worldRenderTarget</code> (a <code>RenderTarget2D</code>
+  the size of the game viewport). This isolates the world from UI and allows post-processing.
+  The batcher uses <code>BlendState.AlphaBlend</code> and <code>SamplerState.PointClamp</code>
+  for crisp pixel-art rendering.
+</p>
+
+<h3>Pass 2 — Lighting</h3>
+<p>
+  Each light source (torches, spells, player light level) is collected into the
+  <code>_lights[]</code> array during world object traversal. The light pass renders
+  each light into <code>_lightRenderTarget</code> using additive blending, then composites
+  the light texture over the world using a custom <em>darkness blend</em>:
+</p>
+
+<pre><code><span class="cm">// _darknessBlend — multiplies world by light mask</span>
+ColorSourceBlend      = Blend.Zero
+ColorDestinationBlend = Blend.SourceColor
+ColorBlendFunction    = BlendFunction.Add
+
+<span class="cm">// _altLightsBlend — add bright light on top</span>
+ColorSourceBlend      = Blend.DestinationColor
+ColorDestinationBlend = Blend.One</code></pre>
+
+<h3>Pass 3 — Post-Processing</h3>
+<p>
+  If XBR scaling or a post-processing effect is enabled (<code>_filterMode</code>), the
+  world render target is passed through a GLSL/HLSL effect before being composited.
+  Point sampling (no filtering) is used by default for authentic pixel-art look.
+</p>
+
+<h3>Pass 4 — UI Layer</h3>
+<p>
+  After the world passes, <code>UIManager.Draw()</code> renders all gumps directly to the
+  backbuffer (not through the world render target). ImGui is rendered last via
+  <code>ImGuiNET.ImGui.Render()</code> before <code>GraphicsDevice.Present()</code>.
+</p>
+
+<!-- ─────────────────────── ASSETS ─────────────────────── -->
+<h2 id="assets">Asset Loaders</h2>
+
+<p>
+  Asset loading is split between the <code>ClassicUO.Assets</code> project (file parsing)
+  and the <code>ClassicUO.Renderer</code> project (GPU upload). The pattern is consistent:
+  the Assets layer reads the UO binary file and produces raw pixel data; the Renderer layer
+  uploads it to a <code>Texture2D</code> and caches the result.
+</p>
+
+<table>
+  <thead><tr><th>Loader</th><th>File(s)</th><th>Produces</th><th>Used for</th></tr></thead>
+  <tbody>
+    <tr><td><code>ArtLoader</code></td><td><code>art.mul</code> / <code>artLegacyMUL.uop</code></td><td>Static tile &amp; item sprites</td><td>Land tiles, statics, items on ground</td></tr>
+    <tr><td><code>AnimationsLoader</code></td><td><code>anim*.mul</code> / <code>anim*.uop</code></td><td>Animation frame sequences</td><td>Mobile animations (walk, run, attack, die)</td></tr>
+    <tr><td><code>GumpartLoader</code></td><td><code>gumpart.mul</code> / <code>gumpartLegacyMUL.uop</code></td><td>UI graphics</td><td>Gump backgrounds, buttons, window chrome</td></tr>
+    <tr><td><code>TextmapLoader</code></td><td><code>texmaps.mul</code></td><td>Land tile textures</td><td>Stretched terrain tiles</td></tr>
+    <tr><td><code>LightsLoader</code></td><td><code>light.mul</code></td><td>Light mask images</td><td>Torch, candle, spell light effects</td></tr>
+    <tr><td><code>MultiLoader</code></td><td><code>multi.mul</code> / <code>MultiCollection.uop</code></td><td>Multi-tile structure layouts</td><td>Houses, ships</td></tr>
+    <tr><td><code>HuesLoader</code></td><td><code>hues.mul</code></td><td>512×1024 hue palette texture</td><td>Loaded into <code>Textures[1]</code> at startup</td></tr>
+  </tbody>
+</table>
+
+<h3>Texture Atlas</h3>
+<p>
+  <span class="file">src/ClassicUO.Renderer/TextureAtlas.cs</span> packs multiple small
+  sprites into a single large <code>Texture2D</code> to reduce texture switches. Art tiles
+  are packed into atlases. When a tile is requested and not yet loaded, it's decoded from
+  the UO file and uploaded to the atlas.
+</p>
+
+<p>
+  Animation frames are <em>not</em> atlas-packed because they vary greatly in size and are
+  accessed per-frame with unpredictable access patterns. Each animation frame may be on its
+  own texture, which is why animation rendering causes more texture switches than static
+  tile rendering.
+</p>
+
+<!-- ─────────────────────── PERFORMANCE ─────────────────────── -->
+<h2 id="performance">Performance Notes</h2>
+
+<table>
+  <thead><tr><th>Hotspot</th><th>Mitigation in TazUO</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Texture switches</td>
+      <td>TextureAtlas packs art tiles together. Four render lists keep static/animation/effect batches separate. Flush triggers are minimised within each list.</td>
+    </tr>
+    <tr>
+      <td>TNext traversal per frame</td>
+      <td>Only tiles in <code>[_minTile, _maxTile]</code> range are visited. <code>UpdateMaxDrawZ()</code> skips recalculation if player position hasn't changed.</td>
+    </tr>
+    <tr>
+      <td>Foliage transparency</td>
+      <td><code>FoliageIndex</code> batches foliage into groups by position. A cache (<code>_surfaceOverheadCache</code>) prevents re-checking the same position every frame.</td>
+    </tr>
+    <tr>
+      <td>Shader texel size</td>
+      <td>Batcher2D caches the last set texel size and skips redundant <code>Pass.Apply()</code> calls when the texture size hasn't changed.</td>
+    </tr>
+    <tr>
+      <td>Roof culling</td>
+      <td><code>UpdateMaxDrawZ()</code> computes <code>_maxZ</code> — objects above this Z are not added to render lists when the player is indoors (no roofs drawn over player).</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ─────────────────────── GOING FORWARD ─────────────────────── -->
+<h2 id="going-forward">Going Forward</h2>
+
+<h3>Safe Patterns</h3>
+<ul>
+  <li>
+    <strong>Adding a new visual effect:</strong> Create a <code>GameEffect</code> subclass,
+    add it to the world via <code>World._effectManager.Add(effect)</code>. It will automatically
+    be classified into <code>_renderListEffects</code>.
+  </li>
+  <li>
+    <strong>Drawing custom HUD elements:</strong> Override <code>Gump.Draw()</code> and call
+    <code>batcher.DrawTexture()</code> / <code>batcher.DrawRectangle()</code> etc. Gumps draw
+    after the world and before ImGui.
+  </li>
+  <li>
+    <strong>Reading tile data for rendering logic:</strong> Use <code>obj.ItemData</code> (ref
+    to <code>StaticTiles</code>) for statics, or <code>land.TileData</code> for terrain — these
+    are zero-copy references into the preloaded file data.
+  </li>
+</ul>
+
+<h3>Anti-Patterns to Avoid</h3>
+<ul>
+  <li>
+    <strong>Never sort render lists by texture:</strong> This breaks visual layering. Accept
+    the texture switch cost — it's intentional.
+  </li>
+  <li>
+    <strong>Never draw directly to <code>GraphicsDevice</code>:</strong> Always go through
+    <code>UltimaBatcher2D</code>. Direct GPU calls outside the batcher's Begin/End will
+    corrupt the vertex buffer state.
+  </li>
+  <li>
+    <strong>Never hold <code>Texture2D</code> references long-term:</strong> The atlas may
+    evict and re-upload textures. Always look up the texture from the loader at draw time.
+  </li>
+  <li>
+    <strong>Don't add per-object rendering logic to the sort phase:</strong>
+    <code>AddTileToRenderList</code> runs for every tile every frame. Expensive operations
+    (file I/O, allocations) in this method will tank frame rate. Keep classification cheap.
+  </li>
+</ul>
+
+<div class="doc-nav">
+  <a href="03-network.html">← 03 Network</a>
+  <a href="05-managers-core.html">05 Core Managers →</a>
+</div>
+</main>
+</div>
+</body>
+</html>

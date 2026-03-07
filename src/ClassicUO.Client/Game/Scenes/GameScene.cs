@@ -385,8 +385,6 @@ namespace ClassicUO.Game.Scenes
             LongDistancePathfinder.Dispose();
             WalkableManager.Instance.Shutdown();
 
-            GridContainerSaveData.Instance.Save();
-            GridContainerSaveData.Reset();
             JournalFilterManager.Instance.Save();
 
             SpellBarManager.Unload();
@@ -435,6 +433,8 @@ namespace ClassicUO.Game.Scenes
             UIManager.GetGump<WorldMapGump>()?.SaveSettings();
 
             ProfileManager.CurrentProfile?.Save(_world, ProfileManager.ProfilePath);
+            GridContainerSaveData.Instance.Save();
+            GridContainerSaveData.Reset();
             ImGuiManager.Dispose();
             MapWebServerManager.Instance.Stop();
             TileMarkerManager.Instance.Save();

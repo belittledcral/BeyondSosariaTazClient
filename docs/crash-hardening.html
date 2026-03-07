@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TazUO — Crash Hardening: Rendering &amp; Concurrency</title>
+  <style>
+    :root {
+      --bg:       #0f1117;
+      --surface:  #181c27;
+      --card:     #1e2233;
+      --border:   #2a3050;
+      --accent:   #4f8ef7;
+      --accent2:  #7c5cfc;
+      --good:     #3ecf8e;
+      --warn:     #f5a623;
+      --bad:      #e05252;
+      --text:     #cdd6f4;
+      --muted:    #7480a0;
+      --code-bg:  #12151f;
+      --code-key: #cba6f7;
+      --code-str: #a6e3a1;
+      --code-num: #fab387;
+      --code-cmt: #585b75;
+      --code-typ: #89dceb;
+      --code-fn:  #89b4fa;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Layout ── */
+    .page { display: flex; min-height: 100vh; }
+    nav {
+      width: 270px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 28px 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    main {
+      flex: 1;
+      padding: 48px 56px;
+      max-width: 1000px;
+    }
+    @media (max-width: 860px) {
+      .page { flex-direction: column; }
+      nav { width: 100%; height: auto; position: static; }
+      main { padding: 28px 20px; }
+    }
+
+    /* ── Nav ── */
+    .nav-logo {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent);
+      padding: 0 24px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .nav-logo .badge {
+      font-size: 0.65rem;
+      background: var(--accent2);
+      color: #fff;
+      padding: 2px 7px;
+      border-radius: 99px;
+      font-weight: 600;
+      letter-spacing: .04em;
+    }
+    .nav-section {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      padding: 20px 24px 6px;
+    }
+    nav ul { list-style: none; }
+    nav ul li a {
+      display: block;
+      padding: 6px 24px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    nav ul li a:hover {
+      color: var(--text);
+      border-left-color: var(--accent);
+      background: rgba(79,142,247,.06);
+      text-decoration: none;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin-bottom: 36px;
+    }
+    h2 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: #e0e6ff;
+      margin: 56px 0 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    h2:first-of-type { border-top: none; margin-top: 0; }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 32px 0 10px;
+    }
+    h4 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--code-typ);
+      margin: 20px 0 8px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    p { margin-bottom: 14px; }
+    ul, ol { padding-left: 22px; margin-bottom: 14px; }
+    li { margin-bottom: 4px; }
+    strong { color: #e0e6ff; }
+
+    /* ── Callout boxes ── */
+    .callout {
+      border-left: 4px solid;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 18px 0;
+      font-size: 0.94rem;
+    }
+    .callout.info    { border-color: var(--accent);  background: rgba(79,142,247,.08); }
+    .callout.good    { border-color: var(--good);    background: rgba(62,207,142,.08); }
+    .callout.warn    { border-color: var(--warn);    background: rgba(245,166,35,.08); }
+    .callout.danger  { border-color: var(--bad);     background: rgba(224,82,82,.08);  }
+    .callout .label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 4px;
+    }
+    .callout.info   .label { color: var(--accent); }
+    .callout.good   .label { color: var(--good);   }
+    .callout.warn   .label { color: var(--warn);   }
+    .callout.danger .label { color: var(--bad);    }
+
+    /* ── Code ── */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      overflow-x: auto;
+      margin: 14px 0 20px;
+      font-size: 0.87rem;
+      line-height: 1.6;
+    }
+    code {
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    }
+    p code, li code {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.86em;
+      color: var(--code-typ);
+    }
+
+    /* Syntax colours (applied via spans) */
+    .kw  { color: var(--code-key); }
+    .ty  { color: var(--code-typ); }
+    .fn  { color: var(--code-fn);  }
+    .st  { color: var(--code-str); }
+    .nm  { color: var(--code-num); }
+    .cm  { color: var(--code-cmt); font-style: italic; }
+    .hl  { background: rgba(79,142,247,.15); display: block; margin: 0 -20px; padding: 0 20px; }
+
+    /* ── Diff blocks ── */
+    .diff { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin: 14px 0 20px; }
+    .diff-hdr { background: #14172e; padding: 8px 18px; font-size: 0.78rem; color: var(--muted); font-family: monospace; border-bottom: 1px solid var(--border); }
+    .diff pre { margin: 0; border: none; border-radius: 0; }
+    .del { background: rgba(224,82,82,.12); display: block; margin: 0 -20px; padding: 0 20px; color: #ff8080; }
+    .add { background: rgba(62,207,142,.10); display: block; margin: 0 -20px; padding: 0 20px; color: #7eefc4; }
+
+    /* ── Flow diagram ── */
+    .flow {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px 28px;
+      margin: 14px 0 20px;
+      font-family: monospace;
+      font-size: 0.88rem;
+      line-height: 1.9;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    /* ── Table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 20px;
+      font-size: 0.9rem;
+    }
+    th {
+      background: var(--card);
+      color: var(--accent);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+    td code { font-size: 0.83rem; }
+
+    /* ── Phase badges ── */
+    .phase {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin: 4px 4px 4px 0;
+    }
+    .phase .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .ph1 .dot { background: var(--bad);   }
+    .ph2 .dot { background: var(--warn);  }
+    .ph3 .dot { background: var(--good);  }
+    .ph4 .dot { background: var(--accent);}
+
+    /* ── File pill ── */
+    .file {
+      display: inline-block;
+      background: #1a1f35;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 10px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: var(--code-fn);
+      margin: 2px 2px;
+    }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+<!-- ══════════════════════════ SIDEBAR NAV ══════════════════════════ -->
+<nav>
+  <div class="nav-logo">
+    TazUO Docs <span class="badge">2026</span>
+  </div>
+
+  <div class="nav-section">Overview</div>
+  <ul>
+    <li><a href="#overview">What was fixed &amp; why</a></li>
+    <li><a href="#root-causes">Root causes explained</a></li>
+  </ul>
+
+  <div class="nav-section">Phase 1 — Rendering</div>
+  <ul>
+    <li><a href="#render-pipeline">Render pipeline overview</a></li>
+    <li><a href="#draw-render-list">DrawRenderList guard</a></li>
+    <li><a href="#tnext">TNext linked-list safety</a></li>
+    <li><a href="#add-tile">AddTileToRenderList</a></li>
+  </ul>
+
+  <div class="nav-section">Phase 2 — Animations</div>
+  <ul>
+    <li><a href="#anim-overview">Animation system overview</a></li>
+    <li><a href="#mobile-anim">Mobile.ProcessAnimation</a></li>
+    <li><a href="#item-anim">Item.ProcessAnimation</a></li>
+    <li><a href="#frame-overflow">Frame index overflow bug</a></li>
+  </ul>
+
+  <div class="nav-section">Phase 3 — Concurrency</div>
+  <ul>
+    <li><a href="#threading-model">Threading model</a></li>
+    <li><a href="#world-update">World.Update loops</a></li>
+    <li><a href="#health-lines">HealthLinesManager</a></li>
+    <li><a href="#auto-loot">AutoLootManager</a></li>
+  </ul>
+
+  <div class="nav-section">Going Forward</div>
+  <ul>
+    <li><a href="#guidelines">Coding guidelines</a></li>
+    <li><a href="#patterns">Safe patterns</a></li>
+    <li><a href="#antipatterns">Anti-patterns to avoid</a></li>
+  </ul>
+</nav>
+
+<!-- ══════════════════════════ MAIN CONTENT ══════════════════════════ -->
+<main>
+
+<h1>Crash Hardening — Rendering &amp; Concurrency</h1>
+<p class="subtitle">
+  Technical reference for the systematic stability sweep committed to TazUO (2026-03-04).
+  Covers what was changed, why it was crashing, and how to write safe code going forward.
+</p>
+
+<!-- ─────────────────────── OVERVIEW ─────────────────────── -->
+<h2 id="overview">What Was Fixed &amp; Why</h2>
+
+<p>
+  TazUO was experiencing frequent crashes, most originating in the rendering subsystem.
+  Four distinct root causes were identified and addressed in a single commit:
+</p>
+
+<div style="display:flex; flex-wrap:wrap; gap:8px; margin:18px 0;">
+  <span class="phase ph1"><span class="dot"></span>Phase 1 — Null/Destroyed objects in render loop</span>
+  <span class="phase ph2"><span class="dot"></span>Phase 2 — Animation frame index overflow</span>
+  <span class="phase ph3"><span class="dot"></span>Phase 3 — Dictionary mutation during enumeration</span>
+  <span class="phase ph4"><span class="dot"></span>Phase 4 — Follow-target null (pre-existing guard confirmed)</span>
+</div>
+
+<table>
+  <tr>
+    <th>File</th>
+    <th>Change</th>
+    <th>Phase</th>
+  </tr>
+  <tr>
+    <td><span class="file">GameScene.cs</span></td>
+    <td>Null / <code>IsDestroyed</code> guard before <code>obj.Draw()</code></td>
+    <td>1</td>
+  </tr>
+  <tr>
+    <td><span class="file">GameSceneDrawingSorting.cs</span></td>
+    <td>Cache <code>TNext</code> before processing in all 4 linked-list loops</td>
+    <td>1</td>
+  </tr>
+  <tr>
+    <td><span class="file">Mobile.cs</span></td>
+    <td>Remove silent <code>(byte)</code> cast on <code>frameIndex</code></td>
+    <td>2</td>
+  </tr>
+  <tr>
+    <td><span class="file">Item.cs</span></td>
+    <td>Change <code>frameIndex</code> from <code>byte</code> to <code>int</code>; remove <code>(byte)</code> cast</td>
+    <td>2</td>
+  </tr>
+  <tr>
+    <td><span class="file">World.cs</span></td>
+    <td><code>.ToList()</code> snapshot on <code>Mobiles.Values</code> and <code>Items.Values</code></td>
+    <td>3</td>
+  </tr>
+  <tr>
+    <td><span class="file">HealthLinesManager.cs</span></td>
+    <td><code>.ToList()</code> snapshot on <code>Mobiles.Values</code></td>
+    <td>3</td>
+  </tr>
+  <tr>
+    <td><span class="file">AutoLootManager.cs</span></td>
+    <td><code>.ToList()</code> snapshot on <code>Items.Values</code></td>
+    <td>3</td>
+  </tr>
+</table>
+
+<!-- ─────────────────────── ROOT CAUSES ─────────────────────── -->
+<h2 id="root-causes">Root Causes Explained</h2>
+
+<h3>1. Stale object references in the render list</h3>
+<p>
+  Every frame, the engine builds a <em>render list</em> — an ordered <code>List&lt;GameObject&gt;</code>
+  of everything that needs to be drawn. Objects are added to this list during the
+  <strong>update phase</strong>, then iterated and drawn during the <strong>draw phase</strong>.
+</p>
+<p>
+  Between those two phases (or even during the update), the network thread can receive a
+  packet that destroys a mobile or item. If that happens, the reference in the render list
+  now points to a <em>logically destroyed</em> object. Calling <code>Draw()</code> on such
+  an object reaches into null animation frames, null textures, or de-allocated native
+  resources — resulting in a <code>NullReferenceException</code> or access violation.
+</p>
+
+<h3>2. TNext pointer invalidation during linked-list traversal</h3>
+<p>
+  Map tiles are stored as intrusive singly-linked lists via the <code>TNext</code> field on
+  <code>GameObject</code>. The traversal pattern <code>obj = obj.TNext</code> reads
+  <code>TNext</code> <em>after</em> the loop body runs. If anything in the loop body — or a
+  concurrent thread — unlinks an object before <code>TNext</code> is read, the iterator
+  jumps to a stale memory location.
+</p>
+
+<h3>3. Silent <code>(byte)</code> overflow on animation frame index</h3>
+<p>
+  The animation frame index was cast to <code>byte</code> to clamp it to the last frame.
+  A <code>byte</code> can only hold values 0–255. If an animation has more than 256 frames
+  (which is legal in UO data), <code>(byte)(frames.Length - 1)</code> silently wraps —
+  for example, frame 256 becomes 0, frame 300 becomes 44. The next array access then uses
+  this wrong index, causing an out-of-bounds read.
+</p>
+
+<h3>4. Dictionary enumeration during network-thread mutation</h3>
+<p>
+  <code>World.Mobiles</code> and <code>World.Items</code> are <code>Dictionary</code>-backed
+  collections. The main/render thread iterates them to call <code>Update()</code>, draw
+  health bars, or scan for loot. Meanwhile the network thread can call packet handlers
+  that add or remove entries. The .NET <code>Dictionary</code> enumerator detects this and
+  throws <code>InvalidOperationException: Collection was modified</code>.
+</p>
+
+<hr />
+
+<!-- ═══════════════════ PHASE 1 — RENDERING ═══════════════════ -->
+<h2 id="render-pipeline">Phase 1 — Rendering: Pipeline Overview</h2>
+
+<p>
+  Each game frame executes a two-stage pipeline:
+</p>
+
+<div class="flow">
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                        GAME LOOP FRAME                          │
+  ├──────────────────────────┬──────────────────────────────────────┤
+  │      UPDATE PHASE        │           DRAW PHASE                 │
+  │                          │                                      │
+  │  GameScene.Update()      │  GameScene.Draw()                    │
+  │    └─ World.Update()     │    └─ DrawRenderList(statics)        │
+  │         ├─ Mobiles       │    └─ DrawRenderList(animations)     │
+  │         ├─ Items         │    └─ DrawRenderList(effects)        │
+  │         └─ Effects       │    └─ DrawRenderList(transparent)    │
+  │                          │                                      │
+  │  SortAndAddToRenderList()│                                      │
+  │    └─ AddTileToRenderList│                                      │
+  │         (fills the 4     │                                      │
+  │          render lists)   │                                      │
+  └──────────────────────────┴──────────────────────────────────────┘
+
+  Network thread (async) can mutate Mobiles / Items at ANY time ──────►
+</div>
+
+<p>
+  The four render lists are:
+</p>
+<ul>
+  <li><strong><code>_renderListStatics</code></strong> — land tiles, static objects, most items</li>
+  <li><strong><code>_renderListAnimations</code></strong> — mobiles, corpses</li>
+  <li><strong><code>_renderListEffects</code></strong> — particle/spell effects</li>
+  <li><strong><code>_renderListTransparentObjects</code></strong> — foliage, trees with alpha</li>
+</ul>
+
+<!-- ─────────── DrawRenderList ─────────── -->
+<h2 id="draw-render-list">DrawRenderList — Null/Destroyed Guard</h2>
+<p class="file">GameScene.cs · <code>DrawRenderList()</code></p>
+
+<h4>What it does</h4>
+<p>
+  <code>DrawRenderList</code> iterates one of the four render lists and calls
+  <code>obj.Draw(batcher, x, y, depth)</code> for every object whose Z-coordinate is
+  within the current ground ceiling (<code>_maxGroundZ</code>).
+</p>
+
+<div class="diff">
+  <div class="diff-hdr">GameScene.cs — DrawRenderList()</div>
+  <pre><code>                    Profiler.EnterContext(<span class="st">"Draw"</span>);
+<span class="add">                    <span class="kw">if</span> (obj == <span class="kw">null</span> || obj.IsDestroyed)</span>
+<span class="add">                    {</span>
+<span class="add">                        Profiler.ExitContext(<span class="st">"Draw"</span>);</span>
+<span class="add">                        <span class="kw">continue</span>;</span>
+<span class="add">                    }</span>
+                    <span class="kw">if</span> (
+                        obj.<span class="fn">Draw</span>(batcher, obj.RealScreenPosition.X, obj.RealScreenPosition.Y, depth)
+                    )
+                    {
+                        ++done;
+                    }
+                    Profiler.ExitContext(<span class="st">"Draw"</span>);</code></pre>
+</div>
+
+<div class="callout warn">
+  <div class="label">Why the check is inside the Profiler context</div>
+  The profiler context was entered before the guard. Exiting it explicitly before
+  <code>continue</code> keeps profiler call pairs balanced, preventing a context
+  stack corruption that would skew performance metrics.
+</div>
+
+<h4>Why this crashes without the guard</h4>
+<p>
+  Individual <code>Draw()</code> overrides in subclasses do have their own early-return
+  guards (<code>if (IsDestroyed) return false</code>), but these guards execute
+  <em>inside</em> virtual dispatch. Virtual dispatch itself is safe — the issue is that
+  the object may have had its native frame data freed between when it was added to the
+  render list and when the draw loop reaches it. The null check at the call site prevents
+  us from ever entering that corrupted state.
+</p>
+
+<!-- ─────────── TNext Safety ─────────── -->
+<h2 id="tnext">TNext Linked-List Safety</h2>
+<p class="file">GameSceneDrawingSorting.cs</p>
+
+<h4>Data structure</h4>
+<p>
+  Each tile cell in the map holds a singly-linked chain of <code>GameObject</code> instances
+  stacked on that cell (land, then statics, then items, then mobiles). Each node exposes
+  its successor via the <code>TNext</code> property.
+</p>
+
+<div class="flow">
+  chunk[x,y] ──► Land ──► Static ──► Static ──► Item ──► Mobile ──► null
+                  │          │          │          │         │
+                TNext      TNext      TNext      TNext     TNext
+</div>
+
+<h4>The hazard</h4>
+<p>
+  The classic <code>for (obj = head; obj != null; obj = obj.TNext)</code> reads
+  <code>obj.TNext</code> <strong>after</strong> the loop body runs. If anything during
+  the loop body — or a concurrent network packet — removes <code>obj</code> from the
+  chain, <code>TNext</code> may be zeroed out or point to freed memory before the loop
+  reads it.
+</p>
+
+<h4>The fix — pre-capture pattern</h4>
+<p>
+  Capture <code>TNext</code> as the <strong>very first thing</strong> in the loop body,
+  before any code that could trigger removal. Use it as the <em>for-loop update
+  expression</em> so that <code>continue</code> and end-of-body both advance through the
+  pre-captured pointer:
+</p>
+
+<div class="diff">
+  <div class="diff-hdr">Loop pattern — before / after</div>
+  <pre><code><span class="cm">// ── BEFORE (unsafe) ──────────────────────────────────</span>
+<span class="del"><span class="kw">for</span> (<span class="ty">GameObject</span> obj = chunk.<span class="fn">GetHeadObject</span>(x, y); obj != <span class="kw">null</span>; obj = obj.TNext)</span>
+<span class="del">{</span>
+<span class="del">    <span class="cm">// ... body. TNext is read AFTER the body by the for-update.</span></span>
+<span class="del">    <span class="cm">// If body triggers removal, TNext may be stale by then.</span></span>
+<span class="del">}</span>
+
+<span class="cm">// ── AFTER (safe) ─────────────────────────────────────</span>
+<span class="add"><span class="kw">for</span> (<span class="ty">GameObject</span> obj = chunk.<span class="fn">GetHeadObject</span>(x, y), _tnext = <span class="kw">null</span>; obj != <span class="kw">null</span>; obj = _tnext)</span>
+<span class="add">{</span>
+<span class="add">    _tnext = obj.TNext;   <span class="cm">// ← captured FIRST, before any body code</span></span>
+    <span class="cm">// ... rest of body. continue / break both work correctly.</span>
+<span class="add">}</span></code></pre>
+</div>
+
+<h4>How the for-loop trick works</h4>
+<p>
+  In a <code>for (init; condition; update)</code> loop, the <em>update expression</em>
+  runs <strong>after</strong> the body — including after any <code>continue</code>
+  statement. By using <code>_tnext</code> as the update expression and setting
+  <code>_tnext = obj.TNext</code> at the <em>top</em> of the body:
+</p>
+<ul>
+  <li><code>continue</code> → skips to the update → <code>obj = _tnext</code> (already captured) ✓</li>
+  <li>Normal fall-through → update → <code>obj = _tnext</code> ✓</li>
+  <li><code>break</code> → exits the loop entirely ✓</li>
+  <li><code>return</code> → exits the function entirely ✓</li>
+</ul>
+
+<p>
+  No loop body code needed to change. This pattern was applied to all four loop sites:
+</p>
+
+<table>
+  <tr>
+    <th>Variable</th>
+    <th>Location</th>
+    <th>Purpose of loop</th>
+  </tr>
+  <tr>
+    <td><code>_tnext</code></td>
+    <td><code>GetMaxLandZ</code> — tile at player position</td>
+    <td>Determine max visible Z / roof culling</td>
+  </tr>
+  <tr>
+    <td><code>_tnext2</code></td>
+    <td><code>GetMaxLandZ</code> — tile at player+1 diagonal</td>
+    <td>Roof culling look-ahead one tile NE</td>
+  </tr>
+  <tr>
+    <td><code>_tnext3</code></td>
+    <td><code>ApplyFoliageTransparency</code></td>
+    <td>Mark tree tiles with current foliage index</td>
+  </tr>
+  <tr>
+    <td><code>_tnext4</code></td>
+    <td><code>AddTileToRenderList</code></td>
+    <td>Classify and enqueue tile objects into render lists</td>
+  </tr>
+</table>
+
+<!-- ─────────── AddTileToRenderList ─────────── -->
+<h2 id="add-tile">AddTileToRenderList — How Tile Objects Are Classified</h2>
+<p class="file">GameSceneDrawingSorting.cs · <code>AddTileToRenderList()</code></p>
+
+<h4>Signature</h4>
+<pre><code><span class="kw">private unsafe bool</span> <span class="fn">AddTileToRenderList</span>(
+    <span class="ty">GameObject</span> obj,           <span class="cm">// head of the TNext chain for this tile</span>
+    <span class="kw">bool</span> useObjectHandles,    <span class="cm">// whether to show name labels above objects</span>
+    <span class="kw">int</span> maxZ,                 <span class="cm">// Z ceiling — objects above this are not drawn</span>
+    <span class="kw">int</span> cotZ,                 <span class="cm">// "circle of transparency" Z reference</span>
+    <span class="kw">ref</span> <span class="ty">Vector2</span> playerScreePos
+) → <span class="kw">bool</span>                     <span class="cm">// true = caller should stop adding statics above this row</span></code></pre>
+
+<h4>Classification logic per object type</h4>
+<p>
+  Each object in the TNext chain is pattern-matched via <code>switch (obj)</code> and
+  routed to the appropriate render list:
+</p>
+
+<table>
+  <tr>
+    <th>Type</th>
+    <th>Target list</th>
+    <th>Key skip conditions</th>
+  </tr>
+  <tr>
+    <td><code>Land</code></td>
+    <td><code>_renderListStatics</code></td>
+    <td>Above maxZ → <code>return false</code>; out of Y viewport → skip</td>
+  </tr>
+  <tr>
+    <td><code>Static</code></td>
+    <td><code>_renderListStatics</code> or <code>_renderListTransparentObjects</code></td>
+    <td>Internal flag; not visible at current season; alpha-culled; foliage hidden; out of viewport</td>
+  </tr>
+  <tr>
+    <td><code>Multi</code></td>
+    <td><code>_renderListStatics</code> or <code>_renderListTransparentObjects</code></td>
+    <td>Same as Static plus movable-multi foliage rules</td>
+  </tr>
+  <tr>
+    <td><code>Mobile</code></td>
+    <td><code>_renderListAnimations</code></td>
+    <td>Exceeds character height ceiling; alpha-culled; out of viewport; underground (<code>HasSurfaceOverhead</code>)</td>
+  </tr>
+  <tr>
+    <td><code>Item</code></td>
+    <td><code>_renderListAnimations</code> (corpse) or <code>_renderListStatics</code></td>
+    <td>Internal; seasonal foliage; alpha-culled; foliage-to-stump; out of viewport</td>
+  </tr>
+  <tr>
+    <td><code>GameEffect</code></td>
+    <td><code>_renderListEffects</code></td>
+    <td>Alpha-culled; out of viewport</td>
+  </tr>
+</table>
+
+<div class="callout info">
+  <div class="label">Tree shadow hack</div>
+  Trees and rocks are placed in <code>_renderListTransparentObjects</code> instead of
+  <code>_renderListStatics</code> when shadows are enabled. This avoids Z-fighting between
+  the object and its shadow because transparent objects are drawn in a separate
+  back-to-front pass.
+</div>
+
+<h4>Return value semantics</h4>
+<p>
+  The function returns <code>false</code> normally and <code>true</code> only for a
+  special case: a tall Static or Multi that overhangs the Z ceiling. Returning <code>true</code>
+  tells the caller (<code>SortAndAddToRenderList</code>) that partial rendering of the
+  overhanging tile is valid — this prevents the roof from completely disappearing when the
+  player stands near its edge.
+</p>
+
+<hr />
+
+<!-- ═══════════════════ PHASE 2 — ANIMATIONS ═══════════════════ -->
+<h2 id="anim-overview">Phase 2 — Animations: System Overview</h2>
+
+<p>
+  TazUO renders character and corpse animations by indexing into a
+  <code>Span&lt;SpriteInfo&gt;</code> returned by:
+</p>
+<pre><code>animations.<span class="fn">GetAnimationFrames</span>(id, action, dir, <span class="kw">out</span> _, <span class="kw">out</span> _)</code></pre>
+
+<p>
+  The span points into native memory loaded from UO's <code>anim*.mul</code> / UOP files.
+  <code>AnimIndex</code> (a <code>byte</code> field on every Entity) stores the current
+  frame. On each <code>ProcessAnimation()</code> call, <code>AnimIndex</code> is
+  incremented or decremented, then stored back.
+</p>
+
+<!-- ─────────── Mobile.ProcessAnimation ─────────── -->
+<h2 id="mobile-anim">Mobile.ProcessAnimation</h2>
+<p class="file">Mobile.cs · <code>ProcessAnimation(bool evaluate = false)</code></p>
+
+<h4>Full flow</h4>
+<div class="flow">
+  ProcessAnimation()
+    ├─ ProcessSteps()          — advances walk path, emits footstep sound
+    ├─ Early exits             — if timer not elapsed or NoIterateAnimIndex()
+    ├─ GetGraphicForAnimation()— body graphic (may differ from display graphic)
+    ├─ GetGroupForAnimation()  — action group (walk, attack, die, …)
+    ├─ GetAnimationFrames()    — Span&lt;SpriteInfo&gt; for (id, action, dir)
+    ├─ Compute next frameIndex — AnimIndex ± 1
+    │
+    ├─ AnimationFromServer branch (server-scripted animations)
+    │    ├─ Forward wrap  → frameIndex = 0
+    │    ├─ Backward wrap → frameIndex = frames.Length - 1   ← FIXED
+    │    └─ repeat-mode logic with SKIP label
+    │
+    └─ Client-driven branch
+         ├─ Forward wrap → frameIndex = 0
+         │    └─ if serial has 0x80000000 flag → remove corpse mobile
+         └─ AnimIndex = (byte)(frameIndex % frames.Length)
+</div>
+
+<h4>Server-scripted animation modes</h4>
+<p>
+  When <code>AnimationFromServer</code> is true the server controls the animation,
+  supplying:
+</p>
+<ul>
+  <li><strong><code>_animationInterval</code></strong> — multiplier applied to the base frame delay</li>
+  <li><strong><code>AnimationFrameCount</code></strong> — overrides how many frames are in the clip (0 = use actual count)</li>
+  <li><strong><code>_isAnimationForwardDirection</code></strong> — play forward or backward</li>
+  <li><strong><code>_animationRepeateMode</code></strong> — 0 = loop forever, N = play N times then stop</li>
+</ul>
+
+<!-- ─────────── Item.ProcessAnimation ─────────── -->
+<h2 id="item-anim">Item.ProcessAnimation — Corpse Only</h2>
+<p class="file">Item.cs · <code>ProcessAnimation(bool evaluate = false)</code></p>
+
+<p>
+  For <code>Item</code> objects only corpses are animated; all others return immediately.
+  The corpse plays a single death animation clip and then holds the final frame:
+</p>
+
+<pre><code><span class="kw">if</span> (frameIndex >= frames.Length)
+{
+    frameIndex = frames.Length - <span class="nm">1</span>;   <span class="cm">// clamp: hold last frame</span>
+}
+AnimIndex = (<span class="ty">byte</span>)(frameIndex % frames.Length);</code></pre>
+
+<p>
+  The <code>ExecuteAnimation</code> flag controls whether to advance the frame this tick.
+  A corpse that has reached its final frame stops there rather than looping.
+</p>
+
+<!-- ─────────── Frame Overflow Bug ─────────── -->
+<h2 id="frame-overflow">The Frame Index Overflow Bug</h2>
+
+<h4>The bug</h4>
+<p>
+  Both files previously used a <code>(byte)</code> cast to assign the last-frame index:
+</p>
+
+<div class="diff">
+  <div class="diff-hdr">Mobile.cs — server-driven backward wrap</div>
+  <pre><code><span class="del">frameIndex = (<span class="ty">byte</span>)(frames.Length - <span class="nm">1</span>);</span>
+<span class="add">frameIndex = frames.Length - <span class="nm">1</span>;</span></code></pre>
+</div>
+
+<div class="diff">
+  <div class="diff-hdr">Item.cs — corpse end-of-clip clamp (declaration also changed)</div>
+  <pre><code><span class="del"><span class="ty">byte</span> frameIndex = (<span class="ty">byte</span>)(AnimIndex + (ExecuteAnimation ? <span class="nm">1</span> : <span class="nm">0</span>));</span>
+<span class="add"><span class="kw">int</span> frameIndex = AnimIndex + (ExecuteAnimation ? <span class="nm">1</span> : <span class="nm">0</span>);</span>
+
+  <span class="cm">// later …</span>
+<span class="del">frameIndex = (<span class="ty">byte</span>)(frames.Length - <span class="nm">1</span>);</span>
+<span class="add">frameIndex = frames.Length - <span class="nm">1</span>;</span></code></pre>
+</div>
+
+<h4>Why it overflows</h4>
+<p>
+  A <code>byte</code> holds exactly 8 bits: values 0–255. The expression
+  <code>(byte)(frames.Length - 1)</code> is computed in <code>int</code> first, then
+  truncated to the low 8 bits. For any animation with more than 256 frames:
+</p>
+
+<table>
+  <tr><th>frames.Length</th><th>(byte)(frames.Length - 1)</th><th>Should be</th></tr>
+  <tr><td>256</td><td>255 ✓</td><td>255</td></tr>
+  <tr><td>257</td><td>0 ✗</td><td>256</td></tr>
+  <tr><td>300</td><td>43 ✗</td><td>299</td></tr>
+  <tr><td>512</td><td>255 ✓ (coincidence)</td><td>511</td></tr>
+</table>
+
+<p>
+  The wrong index then reaches <code>frames[frameIndex]</code>, accessing either the wrong
+  sprite or — in severe cases — memory outside the span's bounds.
+</p>
+
+<div class="callout good">
+  <div class="label">Fix</div>
+  In <strong>Mobile.cs</strong> <code>frameIndex</code> was already declared <code>int</code>;
+  removing the cast is sufficient.<br /><br />
+  In <strong>Item.cs</strong> <code>frameIndex</code> was declared <code>byte</code>. Changing
+  the declaration to <code>int</code> is the correct fix — it allows the variable to hold any
+  valid array index. The final <code>AnimIndex = (byte)(frameIndex % frames.Length)</code>
+  assignment remains correct because after the modulo the result always fits in a <code>byte</code>
+  (AnimIndex itself is a <code>byte</code> field on Entity).
+</div>
+
+<hr />
+
+<!-- ═══════════════════ PHASE 3 — CONCURRENCY ═══════════════════ -->
+<h2 id="threading-model">Phase 3 — Concurrency: Threading Model</h2>
+
+<p>
+  TazUO runs two threads that share game state:
+</p>
+
+<div class="flow">
+  ┌──────────────────────────────────────────────────────────────────┐
+  │  MAIN / RENDER THREAD                                            │
+  │                                                                  │
+  │  Update() → Draw()  (runs every frame, ~60 fps)                  │
+  │    • Iterates Mobiles, Items                                      │
+  │    • Reads world state to render health bars, loot, etc.         │
+  └─────────────────────────┬────────────────────────────────────────┘
+                            │  shared: World.Mobiles, World.Items
+  ┌─────────────────────────▼────────────────────────────────────────┐
+  │  NETWORK THREAD                                                   │
+  │                                                                  │
+  │  AsyncSocketWrapper.ReadAsync() → PacketHandlers                 │
+  │    • AddMobile(), RemoveMobile()                                  │
+  │    • AddItem(),   RemoveItem()                                    │
+  │    • Fires at any time, unrelated to the game loop              │
+  └──────────────────────────────────────────────────────────────────┘
+</div>
+
+<div class="callout danger">
+  <div class="label">Dictionary is not thread-safe</div>
+  <code>Dictionary&lt;K,V&gt;</code> in .NET is explicitly documented as not thread-safe
+  for concurrent reads and writes. The enumerator holds a version counter; if the
+  dictionary is mutated while the enumerator is active, it throws
+  <code>InvalidOperationException</code>. This is not a rare edge case — on a busy server
+  it can happen multiple times per second.
+</div>
+
+<!-- ─────────── World.Update ─────────── -->
+<h2 id="world-update">World.Update — Mobiles &amp; Items Loops</h2>
+<p class="file">World.cs · <code>Update()</code></p>
+
+<h4>Mobiles update loop</h4>
+<pre><code>Profiler.<span class="fn">EnterContext</span>(<span class="st">"MobilesUpdate"</span>);
+<span class="kw">foreach</span> (<span class="ty">Mobile</span> mob <span class="kw">in</span> Mobiles.Values.<span class="fn">ToList</span>())   <span class="cm">// snapshot</span>
+{
+    mob.<span class="fn">Update</span>();
+
+    <span class="kw">if</span> (do_delete &amp;&amp; mob.Distance > ClientViewRange)
+    {
+        <span class="fn">RemoveMobile</span>(mob);    <span class="cm">// modifies Mobiles — safe because we iterate a snapshot</span>
+    }
+
+    <span class="kw">if</span> (mob.IsDestroyed)
+    {
+        _toRemove.<span class="fn">Add</span>(mob.Serial);
+    }
+    <span class="kw">else</span>
+    {
+        <span class="cm">// update war-map overlay …</span>
+    }
+}
+Profiler.<span class="fn">ExitContext</span>(<span class="st">"MobilesUpdate"</span>);
+
+<span class="cm">// deferred removal — avoids issues even without the snapshot</span>
+<span class="kw">foreach</span> (<span class="ty">uint</span> serial <span class="kw">in</span> _toRemove)
+    Mobiles.<span class="fn">Remove</span>(serial);
+_toRemove.<span class="fn">Clear</span>();</code></pre>
+
+<h4>Deferred removal pattern</h4>
+<p>
+  Even within the same thread, <code>RemoveMobile</code> internally removes the entry from
+  the dictionary. With the <code>.ToList()</code> snapshot the enumerator is already
+  decoupled from the live dictionary, so direct removal during the loop is safe.
+  The <code>_toRemove</code> list handles the separate case of objects that set
+  <code>IsDestroyed = true</code> without being caught by the distance check.
+</p>
+
+<h4><code>do_delete</code> throttle</h4>
+<p>
+  Range cleanup does not run every frame. <code>_timeToDelete</code> gates it to run
+  at most every 50 ms. This prevents O(n) distance checks from dominating CPU time
+  on frames where nothing else is happening.
+</p>
+
+<!-- ─────────── HealthLinesManager ─────────── -->
+<h2 id="health-lines">HealthLinesManager.Draw</h2>
+<p class="file">HealthLinesManager.cs · <code>Draw(UltimaBatcher2D batcher)</code></p>
+
+<h4>Purpose</h4>
+<p>
+  Draws HP bars above every visible mobile's head each frame. Controlled by the profile
+  settings <code>ShowMobilesHP</code>, <code>MobileHPType</code>, and
+  <code>MobileHPShowWhen</code>.
+</p>
+
+<h4>Display modes</h4>
+<table>
+  <tr><th><code>MobileHPType</code></th><th>Appearance</th></tr>
+  <tr><td>0</td><td>HP bar graphic (UO gump art)</td></tr>
+  <tr><td>1</td><td>Percentage text only</td></tr>
+  <tr><td>2</td><td>Both bar and percentage</td></tr>
+</table>
+
+<h4>Show-when modes</h4>
+<table>
+  <tr><th><code>MobileHPShowWhen</code></th><th>Condition</th></tr>
+  <tr><td>0</td><td>Always</td></tr>
+  <tr><td>1</td><td>Only when HP is not full</td></tr>
+  <tr><td>2</td><td>Only when HP is not full (same as 1 but different rendering path)</td></tr>
+</table>
+
+<h4>Iteration fix</h4>
+<pre><code><span class="kw">foreach</span> (<span class="ty">Mobile</span> mobile <span class="kw">in</span> _world.Mobiles.Values.<span class="fn">ToList</span>())
+{
+    <span class="kw">if</span> (mobile.IsDestroyed || mobile.Distance > _world.ClientViewRange)
+        <span class="kw">continue</span>;
+    <span class="cm">// … draw bar …</span>
+}</code></pre>
+
+<div class="callout info">
+  <div class="label">Already had a destroyed/distance guard</div>
+  Unlike the render loop, this code already had <code>IsDestroyed || Distance &gt; ClientViewRange</code>
+  guards. The <code>.ToList()</code> addition only addresses the concurrent-modification
+  exception, not null-deref.
+</div>
+
+<!-- ─────────── AutoLootManager ─────────── -->
+<h2 id="auto-loot">AutoLootManager — Scavenger Loop</h2>
+<p class="file">AutoLootManager.cs · <code>OnPositionChanged()</code></p>
+
+<h4>How the scavenger works</h4>
+<p>
+  The scavenger is a feature that automatically picks up ground items (not corpses)
+  when the player walks near them. It fires from the <code>PositionChanged</code> event
+  and is rate-limited to run at most once every 500 ms.
+</p>
+
+<pre><code><span class="kw">private void</span> <span class="fn">OnPositionChanged</span>(<span class="kw">object</span> sender, <span class="ty">PositionChangedArgs</span> e)
+{
+    <span class="kw">if</span> (!_loaded) <span class="kw">return</span>;
+
+    <span class="kw">if</span> (ProfileManager.CurrentProfile.EnableScavenger &amp;&amp; Time.Ticks >= _nextScavengerScan)
+    {
+        _nextScavengerScan = Time.Ticks + <span class="nm">500</span>;
+        <span class="kw">foreach</span> (<span class="ty">Item</span> item <span class="kw">in</span> _world.Items.Values.<span class="fn">ToList</span>())   <span class="cm">// snapshot</span>
+            <span class="kw">if</span> (item != <span class="kw">null</span> &amp;&amp; item.OnGround &amp;&amp; !item.IsLocked &amp;&amp; !item.IsCorpse &amp;&amp; item.Distance &lt; <span class="nm">3</span>)
+                <span class="fn">CheckAndLoot</span>(item);
+    }
+
+    <span class="kw">if</span> (IsEnabled)
+        <span class="kw">foreach</span> (<span class="ty">Item</span> corpse <span class="kw">in</span> _world.<span class="fn">GetCorpseSnapshot</span>())   <span class="cm">// already safe</span>
+            <span class="fn">CheckCorpse</span>(corpse);
+}</code></pre>
+
+<h4>Why corpse iteration is already safe</h4>
+<p>
+  <code>_world.GetCorpseSnapshot()</code> returns a pre-made thread-safe array copy of
+  the corpse list (guarded by <code>_corpsesLock</code>). This pattern is correct and was
+  <strong>not</strong> changed. Only the <code>Items.Values</code> scavenger loop needed
+  the <code>.ToList()</code> addition.
+</p>
+
+<hr />
+
+<!-- ═══════════════════ GOING FORWARD ═══════════════════ -->
+<h2 id="guidelines">Going Forward — Coding Guidelines</h2>
+
+<p>
+  These are the rules that prevent the bugs fixed in this commit from reappearing.
+</p>
+
+<!-- ─────────── Safe Patterns ─────────── -->
+<h2 id="patterns">Safe Patterns</h2>
+
+<h3>Iterating Mobiles or Items</h3>
+<div class="callout good">
+  <div class="label">Always snapshot before iterating shared collections</div>
+  <pre style="margin-top:10px;"><code><span class="cm">// ✓ Safe — snapshot decouples iterator from live dictionary</span>
+<span class="kw">foreach</span> (<span class="ty">Mobile</span> mob <span class="kw">in</span> _world.Mobiles.Values.<span class="fn">ToList</span>())
+{ ... }
+
+<span class="cm">// ✓ Also safe — GetCorpseSnapshot() returns a locked array copy</span>
+<span class="kw">foreach</span> (<span class="ty">Item</span> corpse <span class="kw">in</span> _world.<span class="fn">GetCorpseSnapshot</span>())
+{ ... }</code></pre>
+</div>
+
+<h3>Iterating TNext linked lists</h3>
+<div class="callout good">
+  <div class="label">Always pre-capture TNext as the first statement in the loop body</div>
+  <pre style="margin-top:10px;"><code><span class="cm">// ✓ Safe — TNext captured before any code that could invalidate it</span>
+<span class="kw">for</span> (<span class="ty">GameObject</span> obj = startNode, _tnext = <span class="kw">null</span>; obj != <span class="kw">null</span>; obj = _tnext)
+{
+    _tnext = obj.TNext;   <span class="cm">// ← must be FIRST</span>
+    <span class="cm">// ... safe to use continue, break, return anywhere below</span>
+}</code></pre>
+</div>
+
+<h3>Calling Draw() on game objects</h3>
+<div class="callout good">
+  <div class="label">Guard null and IsDestroyed before calling Draw()</div>
+  <pre style="margin-top:10px;"><code><span class="cm">// ✓ Safe</span>
+<span class="kw">if</span> (obj == <span class="kw">null</span> || obj.IsDestroyed)
+    <span class="kw">continue</span>;
+obj.<span class="fn">Draw</span>(batcher, x, y, depth);</code></pre>
+</div>
+
+<h3>Animation frame indices</h3>
+<div class="callout good">
+  <div class="label">Use int for frame indices; never (byte)-cast an array length expression</div>
+  <pre style="margin-top:10px;"><code><span class="cm">// ✓ Safe — int can hold any frame count</span>
+<span class="kw">int</span> frameIndex = AnimIndex + delta;
+
+<span class="kw">if</span> (frameIndex >= frames.Length)
+    frameIndex = frames.Length - <span class="nm">1</span>;           <span class="cm">// no cast needed</span>
+
+AnimIndex = (<span class="ty">byte</span>)(frameIndex % frames.Length); <span class="cm">// cast AFTER modulo is safe</span></code></pre>
+</div>
+
+<!-- ─────────── Anti-patterns ─────────── -->
+<h2 id="antipatterns">Anti-Patterns to Avoid</h2>
+
+<div class="callout danger">
+  <div class="label">Never use (byte) to clamp an array length or index</div>
+  <pre style="margin-top:10px;"><code><span class="cm">// ✗ WRONG — overflows silently for frames.Length > 256</span>
+frameIndex = (<span class="ty">byte</span>)(frames.Length - <span class="nm">1</span>);</code></pre>
+</div>
+
+<div class="callout danger">
+  <div class="label">Never iterate Mobiles/Items without ToList() (or equivalent snapshot)</div>
+  <pre style="margin-top:10px;"><code><span class="cm">// ✗ WRONG — throws InvalidOperationException if network thread mutates the dictionary</span>
+<span class="kw">foreach</span> (<span class="ty">Mobile</span> mob <span class="kw">in</span> _world.Mobiles.Values)
+{ ... }</code></pre>
+</div>
+
+<div class="callout danger">
+  <div class="label">Never read obj.TNext after the loop body without pre-capturing it</div>
+  <pre style="margin-top:10px;"><code><span class="cm">// ✗ WRONG — TNext may be stale if body (or another thread) unlinks obj</span>
+<span class="kw">for</span> (<span class="ty">GameObject</span> obj = head; obj != <span class="kw">null</span>; obj = obj.TNext)
+{
+    <span class="cm">// ... body that could trigger removal ...</span>
+    <span class="cm">// obj.TNext is read HERE by the for-update, AFTER the body</span>
+}</code></pre>
+</div>
+
+<div class="callout danger">
+  <div class="label">Never call Draw() without a destroyed/null check when the object came from a shared list</div>
+  <pre style="margin-top:10px;"><code><span class="cm">// ✗ WRONG — render list can contain stale entries by draw time</span>
+<span class="kw">foreach</span> (<span class="ty">GameObject</span> obj <span class="kw">in</span> renderList)
+{
+    obj.<span class="fn">Draw</span>(batcher, x, y, depth); <span class="cm">// obj may be destroyed between update and draw</span>
+}</code></pre>
+</div>
+
+<div class="callout warn">
+  <div class="label">Performance note on .ToList()</div>
+  <code>.ToList()</code> allocates a new <code>List&lt;T&gt;</code> on the heap every call.
+  For the Mobiles and Items loops (which run every frame) this generates GC pressure.
+  If this becomes a measurable problem, replace with a pre-allocated snapshot buffer or
+  a <code>ReaderWriterLockSlim</code> around the dictionary. For manager-level loops
+  (HealthLines, AutoLoot) that run much less frequently, <code>.ToList()</code> is fine.
+</div>
+
+<hr />
+
+<p style="color:var(--muted); font-size:0.85rem; margin-top:40px;">
+  Generated 2026-03-04 · TazUO crash hardening commit <code>7d9959d</code>
+</p>
+
+</main>
+</div>
+</body>
+</html>

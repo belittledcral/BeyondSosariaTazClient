@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TazUO — 02: Game Objects &amp; World State</title>
+  <style>
+    :root {
+      --bg:       #0f1117;
+      --surface:  #181c27;
+      --card:     #1e2233;
+      --border:   #2a3050;
+      --accent:   #4f8ef7;
+      --accent2:  #7c5cfc;
+      --good:     #3ecf8e;
+      --warn:     #f5a623;
+      --bad:      #e05252;
+      --text:     #cdd6f4;
+      --muted:    #7480a0;
+      --code-bg:  #12151f;
+      --code-key: #cba6f7;
+      --code-str: #a6e3a1;
+      --code-num: #fab387;
+      --code-cmt: #585b75;
+      --code-typ: #89dceb;
+      --code-fn:  #89b4fa;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .page { display: flex; min-height: 100vh; }
+    nav { width: 270px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); padding: 28px 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+    main { flex: 1; padding: 48px 56px; max-width: 1000px; }
+    @media (max-width: 860px) { .page { flex-direction: column; } nav { width: 100%; height: auto; position: static; } main { padding: 28px 20px; } }
+    .nav-logo { font-size: 1.1rem; font-weight: 700; color: var(--accent); padding: 0 24px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .nav-logo .badge { font-size: 0.65rem; background: var(--accent2); color: #fff; padding: 2px 7px; border-radius: 99px; font-weight: 600; letter-spacing: .04em; }
+    .nav-section { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); padding: 20px 24px 6px; }
+    nav ul { list-style: none; }
+    nav ul li a { display: block; padding: 6px 24px; font-size: 0.9rem; color: var(--muted); border-left: 3px solid transparent; transition: all .15s; }
+    nav ul li a:hover, nav ul li a.active { color: var(--text); border-left-color: var(--accent); background: rgba(79,142,247,.06); text-decoration: none; }
+    h1 { font-size: 2.2rem; font-weight: 800; line-height: 1.2; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 10px; }
+    .subtitle { color: var(--muted); font-size: 1.05rem; margin-bottom: 36px; }
+    h2 { font-size: 1.55rem; font-weight: 700; color: #e0e6ff; margin: 56px 0 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+    h2:first-of-type { border-top: none; margin-top: 0; }
+    h3 { font-size: 1.15rem; font-weight: 700; color: var(--accent); margin: 32px 0 10px; }
+    h4 { font-size: 0.95rem; font-weight: 700; color: var(--code-typ); margin: 20px 0 8px; text-transform: uppercase; letter-spacing: .06em; }
+    p { margin-bottom: 14px; }
+    ul, ol { padding-left: 22px; margin-bottom: 14px; }
+    li { margin-bottom: 4px; }
+    strong { color: #e0e6ff; }
+    .callout { border-left: 4px solid; border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 18px 0; font-size: 0.94rem; }
+    .callout.info    { border-color: var(--accent);  background: rgba(79,142,247,.08); }
+    .callout.good    { border-color: var(--good);    background: rgba(62,207,142,.08); }
+    .callout.warn    { border-color: var(--warn);    background: rgba(245,166,35,.08); }
+    .callout.danger  { border-color: var(--bad);     background: rgba(224,82,82,.08);  }
+    .callout .label { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 4px; }
+    .callout.info   .label { color: var(--accent); }
+    .callout.good   .label { color: var(--good);   }
+    .callout.warn   .label { color: var(--warn);   }
+    .callout.danger .label { color: var(--bad);    }
+    pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 20px; overflow-x: auto; margin: 14px 0 20px; font-size: 0.87rem; line-height: 1.6; }
+    code { font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace; }
+    p code, li code { background: var(--code-bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-size: 0.86em; color: var(--code-typ); }
+    .kw  { color: var(--code-key); }
+    .ty  { color: var(--code-typ); }
+    .fn  { color: var(--code-fn);  }
+    .st  { color: var(--code-str); }
+    .nm  { color: var(--code-num); }
+    .cm  { color: var(--code-cmt); font-style: italic; }
+    .hl  { background: rgba(79,142,247,.15); display: block; margin: 0 -20px; padding: 0 20px; }
+    .flow { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 24px 28px; margin: 14px 0 20px; font-family: monospace; font-size: 0.88rem; line-height: 1.9; white-space: pre; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin: 14px 0 20px; font-size: 0.9rem; }
+    th { background: var(--card); color: var(--accent); font-size: 0.78rem; text-transform: uppercase; letter-spacing: .07em; padding: 10px 14px; text-align: left; border-bottom: 2px solid var(--border); }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+    td code { font-size: 0.83rem; }
+    .file { display: inline-block; background: #1a1f35; border: 1px solid var(--border); border-radius: 6px; padding: 2px 10px; font-family: monospace; font-size: 0.8rem; color: var(--code-fn); margin: 2px 2px; }
+    .doc-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 0.9rem; }
+    .doc-nav a { display: inline-flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 18px; font-weight: 600; transition: border-color .15s; }
+    .doc-nav a:hover { border-color: var(--accent); text-decoration: none; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+  </style>
+</head>
+<body>
+<div class="page">
+<nav>
+  <div class="nav-logo">TazUO Docs <span class="badge">02</span></div>
+  <div class="nav-section">This Document</div>
+  <ul>
+    <li><a href="#hierarchy">Class hierarchy</a></li>
+    <li><a href="#serials">Serial numbers</a></li>
+    <li><a href="#gameobject">GameObject fields</a></li>
+    <li><a href="#entity">Entity fields</a></li>
+    <li><a href="#mobile">Mobile</a></li>
+    <li><a href="#item">Item</a></li>
+    <li><a href="#land-static-multi">Land / Static / Multi</a></li>
+    <li><a href="#playermobile">PlayerMobile</a></li>
+    <li><a href="#world">World container</a></li>
+    <li><a href="#map-chunk">Map &amp; Chunk</a></li>
+    <li><a href="#lifecycle">Object lifecycle</a></li>
+    <li><a href="#going-forward">Going forward</a></li>
+  </ul>
+  <div class="nav-section">All Documents</div>
+  <ul>
+    <li><a href="index.html">Index</a></li>
+    <li><a href="01-architecture.html">01 Architecture</a></li>
+    <li><a href="02-gameobjects.html" class="active">02 Game Objects</a></li>
+    <li><a href="03-network.html">03 Network</a></li>
+    <li><a href="04-rendering.html">04 Rendering</a></li>
+    <li><a href="05-managers-core.html">05 Core Managers</a></li>
+    <li><a href="06-managers-tazuo.html">06 TazUO Managers</a></li>
+    <li><a href="07-ui-controls.html">07 UI Controls</a></li>
+    <li><a href="08-ui-gumps.html">08 UI Gumps</a></li>
+    <li><a href="09-scripting.html">09 Scripting</a></li>
+  </ul>
+</nav>
+
+<main>
+<h1>Game Objects &amp; World State</h1>
+<p class="subtitle">
+  The object hierarchy from <code>LinkedObject</code> to <code>PlayerMobile</code>, how serial
+  numbers identify every entity, how the World container owns everything, and how Map/Chunk
+  spatially organises the tile grid.
+</p>
+
+<!-- ─────────────────────── CLASS HIERARCHY ─────────────────────── -->
+<h2 id="hierarchy">Class Hierarchy</h2>
+
+<div class="flow">LinkedObject                    ← intrusive doubly-linked list node
+  └─ BaseGameObject               ← adds World reference + RealScreenPosition
+       └─ GameObject              ← Graphic, Hue, X/Y/Z, IsDestroyed, Distance
+            ├─ Entity             ← Serial, Hits, Name, Direction, Flags  (IEquatable)
+            │    ├─ Mobile        ← Steps queue, animation, combat flags
+            │    │    └─ PlayerMobile   ← Skills[], Walker, Pathfinder, stats
+            │    └─ Item          ← Container, Amount, Layer, IsCorpse
+            ├─ Land               ← terrain tile: AverageZ, normals, stretching
+            ├─ Static             ← world decoration tile: ItemData, Index
+            └─ Multi              ← large structures (houses, ships)
+
+Also derives from GameObject (effects):
+  GameEffect → MovingEffect, FixedEffect, LightningEffect, DragEffect</div>
+
+<p>
+  <strong>Only <code>Entity</code> subclasses have serials.</strong> <code>Land</code>,
+  <code>Static</code>, and <code>Multi</code> are world-geometry objects with no server-assigned
+  identity — they are created from the UO map files and never sent individual update packets.
+</p>
+
+<!-- ─────────────────────── SERIALS ─────────────────────── -->
+<h2 id="serials">Serial Numbers</h2>
+
+<p>
+  Every server-tracked entity (<code>Mobile</code> and <code>Item</code>) has a 32-bit serial
+  number. The serial encodes whether an entity is a mobile or an item:
+</p>
+
+<pre><code><span class="cm">// SerialHelper.cs — the definitive serial rules</span>
+<span class="kw">public static bool</span> <span class="fn">IsValid</span> (<span class="kw">uint</span> serial) => serial > <span class="nm">0</span>          &amp;&amp; serial < <span class="nm">0x80000000</span>;
+<span class="kw">public static bool</span> <span class="fn">IsMobile</span>(<span class="kw">uint</span> serial) => serial > <span class="nm">0</span>          &amp;&amp; serial < <span class="nm">0x40000000</span>;
+<span class="kw">public static bool</span> <span class="fn">IsItem</span>  (<span class="kw">uint</span> serial) => serial >= <span class="nm">0x40000000</span> &amp;&amp; serial < <span class="nm">0x80000000</span>;</code></pre>
+
+<table>
+  <thead>
+    <tr><th>Range</th><th>Entity type</th><th>Helper</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>0x00000001 – 0x3FFFFFFF</code></td><td>Mobiles (NPCs, players, monsters)</td><td><code>SerialHelper.IsMobile(s)</code></td></tr>
+    <tr><td><code>0x40000000 – 0x7FFFFFFF</code></td><td>Items (equipment, containers, corpses)</td><td><code>SerialHelper.IsItem(s)</code></td></tr>
+    <tr><td><code>0x00000000</code></td><td>Null / invalid</td><td><code>SerialHelper.IsValid(s)</code> → false</td></tr>
+    <tr><td><code>≥ 0x80000000</code></td><td>Server-internal / not a valid client serial</td><td><code>SerialHelper.IsValid(s)</code> → false</td></tr>
+  </tbody>
+</table>
+
+<p>
+  The local player's serial is stored in <code>World.Player.Serial</code>. You can compare
+  any entity to the player with <code>entity.Serial == world.Player</code> — there is an implicit
+  conversion from <code>PlayerMobile</code> to <code>uint</code>.
+</p>
+
+<div class="callout good">
+  <div class="label">Lookup pattern</div>
+  Given an arbitrary serial from a packet, use <code>World.Get(serial)</code> which searches
+  both <code>World.Mobiles</code> and <code>World.Items</code>. For typed lookup use
+  <code>World.Mobiles.TryGetValue(serial, out Mobile m)</code> or
+  <code>World.Items.TryGetValue(serial, out Item item)</code>.
+</div>
+
+<!-- ─────────────────────── GAMEOBJECT ─────────────────────── -->
+<h2 id="gameobject">GameObject — The Base of All World Objects</h2>
+
+<p>
+  <span class="file">Game/GameObjects/GameObject.cs</span> provides the fields that every
+  visible world object shares. It is <code>abstract</code> and split across multiple
+  <code>partial</code> files for different subsystems (animation, rendering).
+</p>
+
+<table>
+  <thead>
+    <tr><th>Member</th><th>Type</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>Graphic</code></td><td><code>ushort</code></td><td>The UO art/animation ID. Setter runs GraphicsReplacement and notifies subclasses.</td></tr>
+    <tr><td><code>Hue</code></td><td><code>ushort</code></td><td>Colour overlay applied by the shader. 0 = default colour.</td></tr>
+    <tr><td><code>X, Y, Z</code></td><td><code>ushort, ushort, sbyte</code></td><td>World tile coordinates. Z is height (–128 to 127).</td></tr>
+    <tr><td><code>IsDestroyed</code></td><td><code>bool</code></td><td>Set by <code>Destroy()</code>. Once true, the object must not be accessed.</td></tr>
+    <tr><td><code>IsPositionChanged</code></td><td><code>bool</code></td><td>Set when X/Y/Z change; cleared after the tile list is updated.</td></tr>
+    <tr><td><code>Distance</code></td><td><code>int</code> (computed)</td><td>Chebyshev distance to player. Returns <code>ushort.MaxValue</code> if no player.</td></tr>
+    <tr><td><code>AlphaHue</code></td><td><code>byte</code></td><td>Transparency (255 = opaque). Used for fading and foliage hiding.</td></tr>
+    <tr><td><code>AllowedToDraw</code></td><td><code>bool</code></td><td>If false, the renderer skips this object entirely.</td></tr>
+    <tr><td><code>FoliageIndex</code></td><td><code>sbyte</code></td><td>Batch index for foliage transparency. −1 = not foliage.</td></tr>
+    <tr><td><code>TextContainer</code></td><td><code>TextContainer</code></td><td>Overhead text messages (speech, damage numbers).</td></tr>
+    <tr><td><code>RealScreenPosition</code></td><td><code>Point</code></td><td>Computed screen-space pixel position for this frame.</td></tr>
+    <tr><td><code>World</code></td><td><code>World</code></td><td>Backref to the world that owns this object.</td></tr>
+  </tbody>
+</table>
+
+<p>
+  <code>Graphic</code> is not raw — its setter calls <code>GraphicsReplacement.Replace()</code>
+  which may swap the graphic and hue based on a client-side replacement table (e.g. seasonal
+  graphics). Always use the setter; never set the backing field directly.
+</p>
+
+<!-- ─────────────────────── ENTITY ─────────────────────── -->
+<h2 id="entity">Entity — The Serial-Bearing Base</h2>
+
+<p>
+  <span class="file">Game/GameObjects/Entity.cs</span> is the base for <code>Mobile</code>
+  and <code>Item</code>. It adds everything needed for server-tracked, interactive objects.
+</p>
+
+<table>
+  <thead>
+    <tr><th>Member</th><th>Type</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>Serial</code></td><td><code>uint</code></td><td>Unique server-assigned identifier.</td></tr>
+    <tr><td><code>Name</code></td><td><code>string</code></td><td>Display name. Set from 0x98 Name Response packet.</td></tr>
+    <tr><td><code>Hits / HitsMax</code></td><td><code>ushort</code></td><td>Current / max hit points. Setting fires <code>EventSink.OnPlayerStatChange</code> if this is the player.</td></tr>
+    <tr><td><code>HitsPercentage</code></td><td><code>byte</code></td><td>0–100. Pre-computed by packet handler for efficient bar rendering.</td></tr>
+    <tr><td><code>HitsRequest</code></td><td><code>HitsRequestStatus</code></td><td>None / Pending / Received — tracks whether a hits query is in flight.</td></tr>
+    <tr><td><code>Direction</code></td><td><code>Direction</code></td><td>Facing direction. Setter calls <code>OnDirectionChanged()</code> on subclasses.</td></tr>
+    <tr><td><code>Flags</code></td><td><code>Flags</code></td><td>Bitmask from server: Hidden, WarMode, Poisoned, YellowBar, Frozen, etc.</td></tr>
+    <tr><td><code>AnimIndex</code></td><td><code>byte</code></td><td>Current animation frame index.</td></tr>
+    <tr><td><code>IsClicked</code></td><td><code>bool</code></td><td>Set when clicked; used to show overhead name / request hits.</td></tr>
+    <tr><td><code>Exists</code></td><td><code>bool</code></td><td>Shorthand for <code>World.Contains(Serial)</code>.</td></tr>
+  </tbody>
+</table>
+
+<p>
+  <code>Entity.Equals(Entity e)</code> compares by serial, so you can use entities in
+  <code>HashSet&lt;Entity&gt;</code> or as dictionary keys safely.
+</p>
+
+<!-- ─────────────────────── MOBILE ─────────────────────── -->
+<h2 id="mobile">Mobile</h2>
+
+<p>
+  <span class="file">Game/GameObjects/Mobile.cs</span> represents any moving creature: NPCs,
+  monsters, other players, and (via <code>PlayerMobile</code>) the local player.
+</p>
+
+<table>
+  <thead>
+    <tr><th>Member</th><th>Type / Value</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>Steps</code></td><td><code>Deque&lt;Step&gt;</code></td><td>Movement prediction queue. Each Step has X, Y, Z, Direction, Run. Consumed by the walker each tick.</td></tr>
+    <tr><td><code>Mount</code></td><td><code>Item</code></td><td>The mount item if mounted, null otherwise.</td></tr>
+    <tr><td><code>IsMounted</code></td><td>computed</td><td>True if <code>Mount != null</code> and has a valid animation graphic.</td></tr>
+    <tr><td><code>IsHuman / IsGargoyle</code></td><td><code>bool</code></td><td>Race flags affecting which animation groups are used.</td></tr>
+    <tr><td><code>IsDead</code></td><td>computed</td><td>Checks for ghost graphics (0x0192, 0x0193, etc.) or explicit <code>_isDead</code> flag.</td></tr>
+    <tr><td><code>IsPoisoned</code></td><td>computed</td><td>SA clients check a separate flag; pre-SA use <code>Flags.Poisoned</code>.</td></tr>
+    <tr><td><code>InWarMode</code></td><td>computed</td><td>Checks <code>Flags.WarMode</code> bitmask.</td></tr>
+    <tr><td><code>Backpack</code></td><td>computed</td><td><code>FindItemByLayer(Layer.Backpack)</code> — the item equipped in the backpack slot.</td></tr>
+    <tr><td><code>InParty</code></td><td><code>bool</code></td><td>Set by PartyManager when added to a party.</td></tr>
+    <tr><td><code>NotorietyFlag</code></td><td><code>NotorietyFlag</code></td><td>Innocent / Murderer / Criminal etc. — controls name colour in TazUO.</td></tr>
+  </tbody>
+</table>
+
+<h3>Animation System on Mobile</h3>
+<p>
+  Animation state is managed across several fields used by the rendering system:
+</p>
+<ul>
+  <li><code>_animationGroup</code> (byte) — which animation group (walk, run, attack, die, etc.)</li>
+  <li><code>AnimIndex</code> — current frame index within the group</li>
+  <li><code>_animationInterval</code> — ticks between frame advances</li>
+  <li><code>_animationRepeat</code> / <code>_animationRepeatModeCount</code> — loop control</li>
+  <li><code>LastAnimationChangeTime</code> — last tick when frame advanced</li>
+</ul>
+<p>
+  The rendering code calls <code>Mobile.ProcessAnimation()</code> each frame to advance the frame
+  counter. The render pass then calls <code>Animations.GetAnimationFrames()</code> with the
+  current group + frame to get the correct sprite.
+</p>
+
+<!-- ─────────────────────── ITEM ─────────────────────── -->
+<h2 id="item">Item</h2>
+
+<p>
+  <span class="file">Game/GameObjects/Item.cs</span> represents every pickable, wearable, or
+  container object: swords, armour, potions, bags, corpses, ships, house tiles, etc.
+</p>
+
+<table>
+  <thead>
+    <tr><th>Member</th><th>Type</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>Amount</code></td><td><code>ushort</code></td><td>Stack count for stackable items; for corpses, holds the body animation ID.</td></tr>
+    <tr><td><code>Container</code></td><td><code>uint</code></td><td>Serial of the container holding this item. 0 / invalid = on ground.</td></tr>
+    <tr><td><code>Layer</code></td><td><code>Layer</code></td><td>Equipment slot if worn on a mobile (Backpack, Head, Chest, etc.).</td></tr>
+    <tr><td><code>OnGround</code></td><td>computed</td><td><code>!SerialHelper.IsValid(Container)</code> — true if not inside anything.</td></tr>
+    <tr><td><code>IsCorpse</code></td><td>computed</td><td><code>Graphic == 0x2006</code></td></tr>
+    <tr><td><code>IsHumanCorpse</code></td><td>computed</td><td>Checks <code>Amount</code> against known human body animation ranges.</td></tr>
+    <tr><td><code>IsMulti</code></td><td><code>bool</code></td><td>True for house / ship items that have a multi-tile footprint.</td></tr>
+    <tr><td><code>IsCoin</code></td><td>computed</td><td>Graphic 0x0EEA/0x0EED/0x0EF0 — coin graphics change with stack size.</td></tr>
+    <tr><td><code>DisplayedGraphic</code></td><td>computed</td><td>Coins: graphic+1/+2 based on amount. Multi items: MultiGraphic. Else: Graphic.</td></tr>
+    <tr><td><code>IsLocked</code></td><td>computed</td><td>Not movable flag AND weight > 90 (GM-locked).</td></tr>
+    <tr><td><code>ItemData</code></td><td>ref <code>StaticTiles</code></td><td>Live reference into TileData array — no allocation. Contains name, flags, weight, etc.</td></tr>
+  </tbody>
+</table>
+
+<h4>TazUO-specific Item fields</h4>
+<table>
+  <thead>
+    <tr><th>Field</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>MatchesHighlightData</code></td><td>Set by GridHighLightData when item properties match a highlight rule.</td></tr>
+    <tr><td><code>HighlightColor</code></td><td>The colour to draw the item highlight frame in the grid container.</td></tr>
+    <tr><td><code>HighlightName</code></td><td>The label shown on the item when highlighted.</td></tr>
+    <tr><td><code>ShouldAutoLoot</code></td><td>Set by AutoLootManager — signals that this item should be looted.</td></tr>
+    <tr><td><code>CustomName</code></td><td>Per-item name override set by the user.</td></tr>
+    <tr><td><code>HighlightChecked</code></td><td>Guard flag so highlight rules run only once per item.</td></tr>
+  </tbody>
+</table>
+
+<!-- ─────────────────────── LAND / STATIC / MULTI ─────────────────────── -->
+<h2 id="land-static-multi">Land, Static, and Multi</h2>
+
+<p>
+  These three classes represent the non-interactive world geometry. They have no serial numbers
+  and are never individually updated by the server after initial map load.
+</p>
+
+<table>
+  <thead>
+    <tr><th>Class</th><th>Source</th><th>Key fields</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>Land</code></td>
+      <td>UO map file (terrain)</td>
+      <td><code>AverageZ</code>, <code>MinZ</code>, <code>IsStretched</code>, <code>NormalTop/Right/Left/Bottom</code>, <code>YOffsets</code></td>
+      <td>Terrain tiles. Stretching applies when neighbouring tiles have different heights — normals used for lighting.</td>
+    </tr>
+    <tr>
+      <td><code>Static</code></td>
+      <td>UO statics file (decoration)</td>
+      <td><code>ItemData</code> (ref), <code>Index</code>, <code>IsVegetation</code></td>
+      <td>World decorations. <code>ItemData</code> is a zero-copy ref into the TileData static array.</td>
+    </tr>
+    <tr>
+      <td><code>Multi</code></td>
+      <td>Multi file (houses, ships)</td>
+      <td><code>MultiInfo</code>, component items</td>
+      <td>Large multi-tile structures. Represented as a single logical object with a bounding region.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  All three are created by <code>Chunk.Load()</code> when a map block is loaded. They live
+  in the per-tile linked list (the TNext chain) inside <code>Chunk.Tiles[x, y]</code>.
+</p>
+
+<!-- ─────────────────────── PLAYERMOBILE ─────────────────────── -->
+<h2 id="playermobile">PlayerMobile — The Local Player</h2>
+
+<p>
+  <span class="file">Game/GameObjects/PlayerMobile.cs</span> extends <code>Mobile</code> with
+  everything specific to the character the user is playing. There is exactly one instance,
+  referenced by <code>World.Player</code>.
+</p>
+
+<pre><code><span class="kw">public class</span> <span class="ty">PlayerMobile</span> : <span class="ty">Mobile</span>
+{
+    <span class="kw">public</span> <span class="ty">Skill</span>[] Skills { <span class="kw">get</span>; }               <span class="cm">// one per skill, loaded from skill file</span>
+    <span class="kw">public</span> <span class="ty">WalkerManager</span> Walker { <span class="kw">get</span>; }         <span class="cm">// client-side movement prediction</span>
+    <span class="kw">public</span> <span class="ty">Pathfinder</span> Pathfinder { <span class="kw">get</span>; }        <span class="cm">// A* auto-walk</span>
+    <span class="kw">public</span> <span class="ty">IReadOnlyDictionary</span>&lt;<span class="ty">BuffIconType</span>, <span class="ty">BuffIcon</span>&gt; BuffIcons { <span class="kw">get</span>; }
+    <span class="kw">public readonly</span> <span class="ty">Ability</span>[] Abilities;          <span class="cm">// [0]=Primary, [1]=Secondary</span>
+
+    <span class="cm">// Stat fields set from 0x11 / 0x3A packets</span>
+    <span class="kw">public short</span> ColdResistance, FireResistance, EnergyResistance;
+    <span class="kw">public short</span> DamageMin, DamageMax, DamageIncrease;
+    <span class="kw">public short</span> DefenseChanceIncrease, HitChanceIncrease;
+    <span class="cm">// ... (many more stat fields)</span>
+
+    <span class="cm">// Corpse tracking (for auto-open logic)</span>
+    <span class="kw">public readonly</span> HashSet&lt;<span class="kw">uint</span>&gt; AutoOpenedCorpses;
+    <span class="kw">public readonly</span> HashSet&lt;<span class="kw">uint</span>&gt; ManualOpenedCorpses;
+}</code></pre>
+
+<p>
+  <code>PlayerMobile</code> also overrides <code>InWarMode</code> (settable from the player,
+  only computed on other mobiles) and adds <code>IsVisible</code> (always true for the player,
+  can be toggled for stealth effects).
+</p>
+
+<!-- ─────────────────────── WORLD ─────────────────────── -->
+<h2 id="world">World — The Global Container</h2>
+
+<p>
+  <span class="file">Game/World.cs</span> is the single source of truth for all in-game state.
+  It owns the entity dictionaries, the map, and all the managers.
+</p>
+
+<pre><code><span class="kw">public sealed class</span> <span class="ty">World</span>
+{
+    <span class="cm">// Entity registries (main thread access only)</span>
+    <span class="kw">public</span> Dictionary&lt;<span class="kw">uint</span>, <span class="ty">Item</span>&gt;   Items   { <span class="kw">get</span>; }
+    <span class="kw">public</span> Dictionary&lt;<span class="kw">uint</span>, <span class="ty">Mobile</span>&gt; Mobiles { <span class="kw">get</span>; }
+
+    <span class="cm">// The local player; null between scenes</span>
+    <span class="kw">public</span> <span class="ty">PlayerMobile</span> Player { <span class="kw">get</span>; <span class="kw">private set</span>; }
+
+    <span class="cm">// Current map; null before entering world</span>
+    <span class="kw">public</span> Map.<span class="ty">Map</span> Map { <span class="kw">get</span>; <span class="kw">private set</span>; }
+
+    <span class="cm">// Convenience</span>
+    <span class="kw">public bool</span>   InGame          => Player != <span class="kw">null</span> &amp;&amp; Map != <span class="kw">null</span>;
+    <span class="kw">public byte</span>   ClientViewRange { <span class="kw">get</span>; <span class="kw">set</span>; }  <span class="cm">// from profile ViewRange</span>
+    <span class="kw">public</span> <span class="ty">Season</span> Season          { <span class="kw">get</span>; <span class="kw">private set</span>; }
+    <span class="kw">public int</span>    MapIndex         { <span class="kw">get</span>; <span class="kw">set</span>; }   <span class="cm">// triggers map reload</span>
+}</code></pre>
+
+<h3>Managers Owned by World</h3>
+<p>
+  <code>World</code>'s constructor instantiates all gameplay managers and wires them together.
+  Every manager receives the <code>World</code> reference at construction:
+</p>
+
+<table>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>Party</code></td><td><code>PartyManager</code></td><td>Party membership, HP tracking</td></tr>
+    <tr><td><code>CorpseManager</code></td><td><code>CorpseManager</code></td><td>Maps corpse Item serials to their Mobile source</td></tr>
+    <tr><td><code>TargetManager</code></td><td><code>TargetManager</code></td><td>Cursor targeting state</td></tr>
+    <tr><td><code>Macros</code></td><td><code>MacroManager</code></td><td>Macro recording / playback</td></tr>
+    <tr><td><code>Journal</code></td><td><code>JournalManager</code></td><td>Chat message log</td></tr>
+    <tr><td><code>OPL</code></td><td><code>ObjectPropertiesListManager</code></td><td>Item property (tooltip) cache</td></tr>
+    <tr><td><code>DurabilityManager</code></td><td><code>DurabilityManager</code></td><td>Equipment wear tracking</td></tr>
+    <tr><td><code>CoolDownBarManager</code></td><td><code>CoolDownBarManager</code></td><td>Cooldown bar display</td></tr>
+    <tr><td><code>NameOverHeadManager</code></td><td><code>NameOverHeadManager</code></td><td>Overhead name display</td></tr>
+    <tr><td><code>WorldDataManager</code></td><td><code>WorldDataManager</code></td><td>Per-map persistent tile data (TazUO)</td></tr>
+    <tr><td><code>HouseManager</code></td><td><code>HouseManager</code></td><td>Customizable house tracking</td></tr>
+    <tr><td><code>AuraManager</code></td><td><code>AuraManager</code></td><td>Aura effect rendering</td></tr>
+    <tr><td><code>Weather</code></td><td><code>Weather</code></td><td>Weather effects</td></tr>
+  </tbody>
+</table>
+
+<h3>Corpse Fast Path</h3>
+<p>
+  In addition to the main <code>Items</code> dictionary, <code>World</code> maintains a
+  <code>HashSet&lt;Item&gt; _corpses</code> (with lock <code>_corpsesLock</code>) for
+  O(1) corpse enumeration. Use <code>World.GetCorpseSnapshot()</code> to get a
+  thread-safe array copy before iterating.
+</p>
+
+<h3>MapIndex Setter — Map Reload</h3>
+<p>
+  Setting <code>World.MapIndex</code> triggers a full map reload: the old <code>Map</code>
+  is destroyed, a new <code>Map</code> is created, a new <code>WorldDataManager</code> is
+  created for the map dimensions, and the player's position is re-anchored. This is called
+  from network packet handlers when the server sends a map change.
+</p>
+
+<!-- ─────────────────────── MAP & CHUNK ─────────────────────── -->
+<h2 id="map-chunk">Map &amp; Chunk — Spatial Organisation</h2>
+
+<p>
+  The world is divided into 8×8-tile <strong>chunks</strong>. The <code>Map</code> object
+  manages a dictionary of loaded chunks and requests chunk loads as the player moves.
+</p>
+
+<div class="flow">World tile space (e.g. 7168 × 4096 for Felucca / Trammel)
+  │
+  └─ divided into chunks: tile(x,y) → chunk(x/8, y/8)
+        │
+        Chunk[8][8] grid of GameObject (first in TNext linked list)
+        │
+        Each Chunk.Tiles[cx, cy] is the HEAD of a linked list
+        of all GameObjects at tile (chunkX*8+cx, chunkY*8+cy):
+          Land → Static → Static → ... → Item → Item → ...
+          (ordered by Z for rendering)</div>
+
+<h3>Chunk Fields</h3>
+<table>
+  <thead>
+    <tr><th>Field</th><th>Type</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>Tiles[8,8]</code></td><td><code>GameObject[,]</code></td><td>Per-cell head of the TNext linked list</td></tr>
+    <tr><td><code>TileZ[64]</code></td><td><code>sbyte[]</code></td><td>Cached Z values from file — avoids locked file reads at runtime</td></tr>
+    <tr><td><code>X, Y</code></td><td><code>int</code></td><td>Chunk coordinates (not tile coordinates)</td></tr>
+    <tr><td><code>LastAccessTime</code></td><td><code>long</code></td><td>Time.Ticks when last used; chunks not accessed for <code>CLEAR_TEXTURES_DELAY</code> ms are evicted</td></tr>
+    <tr><td><code>IsLoading</code></td><td><code>volatile bool</code></td><td>Set during async load; renderers must skip chunks still loading</td></tr>
+    <tr><td><code>IsDestroyed</code></td><td><code>bool</code></td><td>Set when the chunk is evicted; all GameObjects in it are also destroyed</td></tr>
+  </tbody>
+</table>
+
+<h3>Chunk Load Priority</h3>
+<p>
+  <code>Chunk.Load()</code> checks sources in priority order:
+</p>
+<ol>
+  <li><strong>WorldDataManager in-memory store</strong> — TazUO world edits override map files</li>
+  <li><strong>WorldDataManager file-backed store</strong> — persisted edits from previous sessions</li>
+  <li><strong>UO map files</strong> — the original Ultima Online data</li>
+</ol>
+
+<!-- ─────────────────────── LIFECYCLE ─────────────────────── -->
+<h2 id="lifecycle">Object Lifecycle</h2>
+
+<div class="flow">Network packet received (on main thread after queue dispatch)
+  │
+  ├─ CREATE path (e.g. 0x78 Mobile Update / 0x1A Item Update)
+  │    PacketHandlers.MobileUpdate() / ItemUpdate()
+  │      ├─ World.Mobiles.TryGetValue() — existing? update fields
+  │      └─ else: new Mobile(world, serial) → World.Mobiles.Add()
+  │              → World.Map.GetTile(x, y).AddGameObject(mobile)
+  │                 (inserts into the TNext linked list)
+  │
+  ├─ UPDATE path (e.g. 0x77 Mobile Moving)
+  │    entity.X = newX; entity.Y = newY; entity.Z = newZ;
+  │    entity.IsPositionChanged = true;
+  │    (chunk sorts object into correct tile slot next frame)
+  │
+  └─ DESTROY path (e.g. 0x1D Delete Object)
+       World._toRemove.Add(serial)
+         └─ World.Update() calls RemoveMobile/RemoveItem:
+               entity.Destroy()   ← sets IsDestroyed = true
+               entity.RemoveFromTile()   ← unlinks from TNext chain
+               World.Mobiles/Items.Remove(serial)</div>
+
+<div class="callout danger">
+  <div class="label">IsDestroyed is a hard stop</div>
+  Any code that holds a reference to a <code>GameObject</code> must check
+  <code>obj.IsDestroyed</code> before accessing any field. Destroyed objects are not
+  immediately GC'd — they can remain referenced in lists, manager caches, or gumps until
+  those references are cleared. Accessing a destroyed object's X/Y/Z or Graphic after
+  <code>Destroy()</code> may return stale or zeroed data.
+</div>
+
+<p>
+  Deletions are deferred to <code>World.Update()</code> via the <code>_toRemove</code> list.
+  This prevents modification of <code>World.Mobiles</code>/<code>World.Items</code> during
+  iteration — a common source of <code>InvalidOperationException</code> bugs.
+</p>
+
+<!-- ─────────────────────── GOING FORWARD ─────────────────────── -->
+<h2 id="going-forward">Going Forward</h2>
+
+<table>
+  <thead>
+    <tr><th>Pattern</th><th>Safe approach</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Accessing any game object</td>
+      <td>Always check <code>obj != null &amp;&amp; !obj.IsDestroyed</code> first, even if you just retrieved it from a dictionary.</td>
+    </tr>
+    <tr>
+      <td>Iterating Mobiles or Items</td>
+      <td>Use <code>.ToList()</code> or <code>.ToArray()</code> on the values collection before iterating if you might add/remove during the loop. Or use <code>_toRemove</code> deferred deletion.</td>
+    </tr>
+    <tr>
+      <td>Finding an entity by serial</td>
+      <td><code>World.Get(serial)</code> returns <code>Entity</code> (checks both collections). For typed access use <code>World.Mobiles.TryGetValue</code> or <code>World.Items.TryGetValue</code>.</td>
+    </tr>
+    <tr>
+      <td>Adding TazUO fields to Item</td>
+      <td>Add them directly to <code>Item.cs</code>. Reset them in the pool-reset code (the commented-out block) if pooling is re-enabled.</td>
+    </tr>
+    <tr>
+      <td>Storing item references in managers</td>
+      <td>Store the <code>uint</code> serial, not the <code>Item</code> reference. Look up the object by serial when needed. Stale object references are a major crash source.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <div class="label">Thread safety</div>
+  <code>World.Mobiles</code> and <code>World.Items</code> are plain <code>Dictionary</code>
+  instances — not thread-safe. Only the main game thread should read or write them.
+  The network thread queues updates as packets, which are dispatched on the main thread.
+  The corpse collection uses a dedicated lock for the one cross-thread use case.
+</div>
+
+<div class="doc-nav">
+  <a href="01-architecture.html">← 01 Architecture</a>
+  <a href="03-network.html">03 Network &amp; Packets →</a>
+</div>
+</main>
+</div>
+</body>
+</html>

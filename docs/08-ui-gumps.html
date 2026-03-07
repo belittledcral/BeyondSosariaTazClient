@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TazUO Docs — 08: UI Gumps: Key Windows</title>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --card: #1c2128;
+    --border: #30363d; --accent: #58a6ff; --accent2: #79c0ff;
+    --text: #e6edf3; --muted: #8b949e; --green: #3fb950;
+    --yellow: #d29922; --red: #f85149; --purple: #bc8cff;
+    --orange: #ffa657;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif;
+         font-size: 15px; line-height: 1.65; display: flex; min-height: 100vh; }
+  nav { width: 260px; min-width: 260px; background: var(--surface); border-right: 1px solid var(--border);
+        padding: 24px 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; flex-shrink: 0; }
+  nav h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+            color: var(--muted); padding: 0 20px 8px; }
+  nav a { display: block; padding: 6px 20px; color: var(--muted); text-decoration: none;
+          font-size: 13px; transition: color .15s, background .15s; border-left: 2px solid transparent; }
+  nav a:hover { color: var(--text); background: var(--card); }
+  nav a.active { color: var(--accent); border-left-color: var(--accent); background: var(--card); }
+  nav .nav-group { margin-bottom: 20px; }
+  main { flex: 1; padding: 48px 60px; max-width: 1100px; }
+  h1 { font-size: 2.2rem; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+  .subtitle { color: var(--muted); font-size: 1.05rem; margin-bottom: 40px; }
+  h2 { font-size: 1.45rem; font-weight: 600; color: var(--accent2); margin: 48px 0 16px;
+       padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.1rem; font-weight: 600; color: var(--orange); margin: 28px 0 12px; }
+  h4 { font-size: .95rem; font-weight: 600; color: var(--purple); margin: 20px 0 8px; }
+  p { margin-bottom: 14px; color: var(--text); }
+  ul, ol { margin: 0 0 14px 24px; }
+  li { margin-bottom: 5px; }
+  code { background: var(--card); border: 1px solid var(--border); border-radius: 4px;
+         padding: 1px 6px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: .87em; color: var(--orange); }
+  pre { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+        padding: 20px; overflow-x: auto; margin: 16px 0 24px; }
+  pre code { background: none; border: none; padding: 0; font-size: .88em; color: var(--text); }
+  .kw { color: #ff7b72; } .ty { color: #79c0ff; } .cm { color: #8b949e; font-style: italic; }
+  .st { color: #a5d6ff; } .nu { color: #79c0ff; } .fn { color: #d2a8ff; }
+  .prop { color: #ffa657; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0 28px; font-size: .9rem; }
+  th { background: var(--card); color: var(--accent2); font-weight: 600; text-align: left;
+       padding: 10px 14px; border: 1px solid var(--border); }
+  td { padding: 9px 14px; border: 1px solid var(--border); vertical-align: top; }
+  tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+  .callout { border-radius: 8px; padding: 16px 20px; margin: 20px 0; border-left: 4px solid; }
+  .callout.info { background: rgba(88,166,255,.08); border-color: var(--accent); }
+  .callout.good { background: rgba(63,185,80,.08); border-color: var(--green); }
+  .callout.warn { background: rgba(210,153,34,.1); border-color: var(--yellow); }
+  .callout.danger { background: rgba(248,81,73,.08); border-color: var(--red); }
+  .callout strong { display: block; margin-bottom: 6px; font-size: .85rem; text-transform: uppercase;
+                    letter-spacing: .5px; }
+  .callout.info strong { color: var(--accent); }
+  .callout.good strong { color: var(--green); }
+  .callout.warn strong { color: var(--yellow); }
+  .callout.danger strong { color: var(--red); }
+  .flow { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+          padding: 20px 28px; margin: 16px 0 24px; font-family: monospace; font-size: .87em;
+          white-space: pre; line-height: 1.7; color: var(--text); overflow-x: auto; }
+  .nav-page-links { display: flex; justify-content: space-between; margin-top: 60px;
+                    padding-top: 24px; border-top: 1px solid var(--border); }
+  .nav-page-links a { color: var(--accent); text-decoration: none; font-size: .95rem; }
+  .nav-page-links a:hover { text-decoration: underline; }
+  .badge { display: inline-block; font-size: .72rem; padding: 1px 7px; border-radius: 10px;
+           background: rgba(188,140,255,.15); color: var(--purple); border: 1px solid var(--purple);
+           margin-left: 6px; vertical-align: middle; }
+  .badge.new { background: rgba(63,185,80,.12); color: var(--green); border-color: var(--green); }
+  .badge.server { background: rgba(210,153,34,.12); color: var(--yellow); border-color: var(--yellow); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-group">
+    <h2>TazUO Docs</h2>
+    <a href="index.html">← Index</a>
+    <a href="01-architecture.html">01 · Architecture</a>
+    <a href="02-gameobjects.html">02 · Game Objects</a>
+    <a href="03-network.html">03 · Network</a>
+    <a href="04-rendering.html">04 · Rendering</a>
+    <a href="05-managers-core.html">05 · Core Managers</a>
+    <a href="06-managers-tazuo.html">06 · TazUO Managers</a>
+    <a href="07-ui-controls.html">07 · UI Controls</a>
+    <a href="08-ui-gumps.html" class="active">08 · UI Gumps</a>
+    <a href="09-scripting.html">09 · Scripting</a>
+  </div>
+  <div class="nav-group">
+    <h2>This Page</h2>
+    <a href="#overview">Overview</a>
+    <a href="#gumptypes">GumpType Enum</a>
+    <a href="#catalog">Full Catalog</a>
+    <a href="#paperdoll">PaperDoll / ModernPaperdoll</a>
+    <a href="#container">ContainerGump</a>
+    <a href="#gridcontainer">GridContainer</a>
+    <a href="#healthbar">HealthBarGump</a>
+    <a href="#statusgump">StatusGump</a>
+    <a href="#journal">JournalGump</a>
+    <a href="#spellbook">SpellbookGump</a>
+    <a href="#skills">SkillGumps</a>
+    <a href="#worldmap">WorldMapGump</a>
+    <a href="#server-gumps">Server Gumps</a>
+    <a href="#persistence">State Persistence</a>
+    <a href="#modernoptions">ModernOptionsGump</a>
+    <a href="#forward">Going Forward</a>
+  </div>
+</nav>
+
+<main>
+  <h1>UI Gumps: Key Windows</h1>
+  <p class="subtitle">Session 08 — The major game windows, server vs. client gumps, and state persistence</p>
+
+  <!-- ═══════════════════════════════════════════════════════ OVERVIEW -->
+  <h2 id="overview">Overview</h2>
+
+  <p>The <code>Game/UI/Gumps/</code> directory contains ~90 files — every major gameplay window. Some gumps are <strong>client-created</strong> (spawned by game code in response to player actions), while others are <strong>server-created</strong> (generic gumps sent as packets by the UO server). Most TazUO gumps are client-created.</p>
+
+  <p>The class hierarchy for gumps adds several optional layers on top of the base <code>Gump</code>:</p>
+
+<div class="flow">Gump                     — base (position, lock, alpha, save/restore)
+├── AnchorableGump         — can be snap-anchored to adjacent gumps (health bars)
+│   ├── BaseHealthBarGump  — any HP-tracking window
+│   │   ├── HealthBarGump  — classic UO art health bar
+│   │   └── ModernHealthBar
+│   └── ModernPaperdoll    — TazUO flat paperdoll
+├── ResizableGump          — can be resized by dragging an edge/corner
+│   ├── GridContainer      — TazUO grid inventory view
+│   └── ResizableJournal   — resizable journal (TazUO)
+├── ScalableGump           — can be scaled (zoomed)
+│   └── ScalableTextContainerGump
+│        └── PaperDollGump — classic UO paperdoll
+├── TextContainerGump      — manages a list of gumps from text packets
+│   └── ContainerGump      — classic UO container view
+└── StatusGumpBase         — player status bar (HP/Mana/Stam/Stats)
+     ├── StatusGumpModern   — TazUO modern status bar
+     └── StatusGumpOld      — classic UO status bar</div>
+
+  <!-- ═══════════════════════════════════════════════════════ GUMPTYPES -->
+  <h2 id="gumptypes">GumpType Enum — The Persistence Registry</h2>
+
+  <p>Every gump that should save its position across login sessions must have a unique <code>GumpType</code> value. The type is written to the session XML on logout and used to re-create the window on login:</p>
+
+  <table>
+    <tr><th>GumpType</th><th>Value</th><th>Window</th></tr>
+    <tr><td><code>None</code></td><td>0</td><td>Transient gumps that should not be saved</td></tr>
+    <tr><td><code>Buff</code></td><td>1</td><td>Classic buff icon tray</td></tr>
+    <tr><td><code>Container</code></td><td>2</td><td>Classic container view</td></tr>
+    <tr><td><code>CounterBar</code></td><td>3</td><td>Item counter bar</td></tr>
+    <tr><td><code>HealthBar</code></td><td>4</td><td>Mobile health bar window</td></tr>
+    <tr><td><code>InfoBar</code></td><td>5</td><td>Info bar (custom stat display)</td></tr>
+    <tr><td><code>Journal</code></td><td>6</td><td>Classic journal/chat log</td></tr>
+    <tr><td><code>MacroButton</code></td><td>7</td><td>Floating macro button</td></tr>
+    <tr><td><code>MiniMap</code></td><td>8</td><td>Mini map window</td></tr>
+    <tr><td><code>PaperDoll</code></td><td>9</td><td>Paperdoll (classic or modern)</td></tr>
+    <tr><td><code>SkillMenu</code></td><td>10</td><td>Skills window</td></tr>
+    <tr><td><code>SpellBook</code></td><td>11</td><td>Spellbook window</td></tr>
+    <tr><td><code>StatusGump</code></td><td>12</td><td>Player status bar</td></tr>
+    <tr><td><code>WorldMap</code></td><td>17</td><td>World map window</td></tr>
+    <tr><td><code>NameOverHeadHandler</code></td><td>21</td><td>Name overhead configuration panel</td></tr>
+    <tr><td><code>ScriptManager</code></td><td>22</td><td>Script manager (ImGui)</td></tr>
+    <tr><td><code>MacroButtonEditor</code></td><td>6464</td><td>Macro button editor</td></tr>
+    <tr><td><code>DurabilityGump</code></td><td>6465</td><td>Equipment durability display</td></tr>
+    <tr><td><code>GridContainer</code></td><td>8787</td><td>TazUO grid inventory view</td></tr>
+    <tr><td><code>NearbyCorpseLoot</code></td><td>8788</td><td>Nearby corpse loot grid</td></tr>
+    <tr><td><code>SpellBar</code></td><td>8789</td><td>Spell bar window</td></tr>
+    <tr><td><code>HealthBarCollector</code></td><td>8791</td><td>Multiple health bars aggregator</td></tr>
+  </table>
+
+  <!-- ═══════════════════════════════════════════════════════ CATALOG -->
+  <h2 id="catalog">Full Gump Catalog</h2>
+
+  <p>All gumps in <code>Game/UI/Gumps/</code>:</p>
+
+  <table>
+    <tr><th>File</th><th>Purpose</th><th>Type</th></tr>
+    <tr><td><code>PaperdollGump.cs</code></td><td>Classic UO paperdoll (equipment view + war mode)</td><td>Client</td></tr>
+    <tr><td><code>ModernPaperdoll.cs</code></td><td>TazUO flat paperdoll with embedded PNG art</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>ContainerGump.cs</code></td><td>Classic UO container view (backpack, bags)</td><td>Client + Server</td></tr>
+    <tr><td><code>GridContainer.cs</code></td><td>TazUO grid inventory with search and highlight</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>GridLootGump.cs</code></td><td>TazUO grid view of a specific corpse for looting</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>HealthBarGump.cs</code></td><td>Mobile HP bar (single target)</td><td>Client</td></tr>
+    <tr><td><code>HealthbarCollectorGump.cs</code></td><td>Aggregated multi-target health bar window</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>StatusGump.cs</code></td><td>Player stats bar (HP/Mana/Stamina + attributes)</td><td>Client</td></tr>
+    <tr><td><code>JournalGump.cs</code></td><td>Classic expanding scroll journal</td><td>Client</td></tr>
+    <tr><td><code>ResizableJournal.cs</code></td><td>TazUO resizable journal with filter tabs</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>SpellbookGump.cs</code></td><td>Spellbook (all spell circles)</td><td>Client + Server</td></tr>
+    <tr><td><code>SkillGumpAdvanced.cs</code></td><td>TazUO advanced skills window</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>StandardSkillsGump.cs</code></td><td>Classic skills window</td><td>Client</td></tr>
+    <tr><td><code>MiniMapGump.cs</code></td><td>Minimap radar display</td><td>Client</td></tr>
+    <tr><td><code>WorldMapGump.cs</code></td><td>Full world map with markers</td><td>Client</td></tr>
+    <tr><td><code>BuffGump.cs</code></td><td>Classic buff icon tray</td><td>Client</td></tr>
+    <tr><td><code>ImprovedBuffGump.cs</code></td><td>TazUO improved buff display with timers</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>CoolDownBar.cs</code></td><td>Individual cooldown bar gump (managed by CoolDownBarManager)</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>DurabilityGump.cs</code></td><td>Equipment durability wear bars (DurabilitysGump)</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>InfoBarGump.cs</code></td><td>Configurable stat label bar across screen edge</td><td>Client</td></tr>
+    <tr><td><code>CounterBarGump.cs</code></td><td>Item quantity counter bar</td><td>Client</td></tr>
+    <tr><td><code>PartyGump.cs</code></td><td>Party management (invite, leave, loot)</td><td>Client + Server</td></tr>
+    <tr><td><code>ChatGump.cs</code></td><td>UO Chat system window</td><td>Client</td></tr>
+    <tr><td><code>ShopGump.cs</code></td><td>Classic vendor buy/sell</td><td>Server</td></tr>
+    <tr><td><code>ModernShopGump.cs</code></td><td>TazUO modern vendor window</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>TradingGump.cs</code></td><td>Player-to-player trade window</td><td>Server</td></tr>
+    <tr><td><code>BulletinBoardGump.cs</code></td><td>Bulletin board reader</td><td>Server</td></tr>
+    <tr><td><code>ModernBookGump.cs</code></td><td>TazUO book reading/writing interface</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>MacroGump.cs</code></td><td>Macro editor window</td><td>Client</td></tr>
+    <tr><td><code>MacroButtonGump.cs</code></td><td>Floating macro activation button</td><td>Client</td></tr>
+    <tr><td><code>HouseCustomizationGump.cs</code></td><td>House design placement tool</td><td>Server</td></tr>
+    <tr><td><code>CombatBookGump.cs</code></td><td>Special ability book</td><td>Client</td></tr>
+    <tr><td><code>RacialAbilitiesBookGump.cs</code></td><td>Racial ability book</td><td>Client</td></tr>
+    <tr><td><code>PopupMenuGump.cs</code></td><td>Right-click context popup</td><td>Server + Client</td></tr>
+    <tr><td><code>MenuGump.cs</code></td><td>Server-sent list selection menu</td><td>Server</td></tr>
+    <tr><td><code>ProfileGump.cs</code></td><td>Profile (bio) gump</td><td>Server</td></tr>
+    <tr><td><code>QuestArrowGump.cs</code></td><td>Quest direction arrow overlay</td><td>Server</td></tr>
+    <tr><td><code>MapGump.cs</code></td><td>UO map item (cartography map)</td><td>Server</td></tr>
+    <tr><td><code>ColorPickerGump.cs</code></td><td>UO hue picker</td><td>Client</td></tr>
+    <tr><td><code>RGBColorPickerGump.cs</code></td><td>TazUO RGB color picker</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>MessageBoxGump.cs</code></td><td>OK/Cancel dialog</td><td>Client</td></tr>
+    <tr><td><code>QuestionGump.cs</code></td><td>Yes/No question dialog</td><td>Client + Server</td></tr>
+    <tr><td><code>TextEntryDialogGump.cs</code></td><td>Single-line text input dialog</td><td>Client</td></tr>
+    <tr><td><code>FileSelector.cs</code></td><td>TazUO file browser dialog</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>DebugGump.cs</code></td><td>Internal debug state display</td><td>Client</td></tr>
+    <tr><td><code>NetworkStatsGump.cs</code></td><td>Packet/bandwidth stats display</td><td>Client</td></tr>
+    <tr><td><code>UpdateTimerViewer.cs</code></td><td>Per-gump update timing profiler</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>AnimBrowser.cs</code></td><td>Animation browser for development</td><td>Client</td></tr>
+    <tr><td><code>ArtBrowserGump.cs</code></td><td>Art browser for development</td><td>Client</td></tr>
+    <tr><td><code>InspectorGump.cs</code></td><td>Game object inspector</td><td>Client</td></tr>
+    <tr><td><code>NearbyItems.cs</code></td><td>List of nearby items on the ground</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>TooltipConfigGump.cs</code></td><td>Tooltip override configuration</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>IgnoreManagerGump.cs</code></td><td>Ignore list management</td><td>Client</td></tr>
+    <tr><td><code>NameOverHeadHandlerGump.cs</code></td><td>Name overhead option selector</td><td>Client</td></tr>
+    <tr><td><code>TopBarGump.cs</code></td><td>Top HUD bar with quick buttons</td><td>Client</td></tr>
+    <tr><td><code>WorldViewportGump.cs</code></td><td>The game viewport container (not normally visible)</td><td>Client</td></tr>
+    <tr><td><code>SystemChatControl.cs</code></td><td>Chat input bar at bottom of screen</td><td>Client</td></tr>
+    <tr><td><code>ProgressBarGump.cs</code></td><td>TazUO autoloot progress indicator</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>MarkersManagerGump.cs</code></td><td>World map marker editor</td><td>Client <span class="badge new">TazUO</span></td></tr>
+    <tr><td><code>BoatControl.cs</code></td><td>Boat navigation control panel</td><td>Client</td></tr>
+    <tr><td><code>DressAgentConfigGump.cs</code></td><td>Dress agent outfit editor</td><td>Client</td></tr>
+  </table>
+
+  <!-- ═══════════════════════════════════════════════════════ PAPERDOLL -->
+  <h2 id="paperdoll">PaperDollGump &amp; ModernPaperdoll</h2>
+
+  <h3>PaperDollGump (Classic)</h3>
+
+  <p><code>PaperDollGump : ScalableTextContainerGump</code> is the traditional Ultima Online character window showing the 3D avatar with equipment slots arranged around it. It inherits <code>ScalableGump</code> so it can be scaled via <code>Profile.PaperdollScale</code>.</p>
+
+  <table>
+    <tr><th>Feature</th><th>Detail</th></tr>
+    <tr><td>Serial</td><td><code>LocalSerial</code> = the mobile being viewed (player or another character)</td></tr>
+    <tr><td>Equipment slots</td><td>9 slots left + 8 slots right, each an <code>EquipmentSlot</code> control wrapping a <code>PaperDollInteractable</code></td></tr>
+    <tr><td>Minimize</td><td>Double-click collapses to icon; toggling swaps the background <code>GumpPic</code> graphic</td></tr>
+    <tr><td>War mode</td><td>The war/peace toggle button swaps art arrays <code>PeaceModeBtnGumps</code> / <code>WarModeBtnGumps</code></td></tr>
+    <tr><td>Party manifest</td><td>Links to the party gump for quick group management</td></tr>
+    <tr><td>Saving</td><td>Position saved to <code>Profile.PaperdollPosition</code>; scale to <code>Profile.PaperdollScale</code></td></tr>
+  </table>
+
+  <h3>ModernPaperdoll (TazUO) <span class="badge new">TazUO</span></h3>
+
+  <p><code>ModernPaperdoll : AnchorableGump</code> replaces the classic art with a flat modern design. It loads <code>modern-paperdollgump.png</code> from embedded resources via <code>PNGLoader</code> instead of using UO gumpart IDs.</p>
+
+  <table>
+    <tr><th>Feature</th><th>Detail</th></tr>
+    <tr><td>Size</td><td>Fixed 250 × 380 px</td></tr>
+    <tr><td>Equipment slots</td><td><code>Dictionary&lt;Layer[], ItemSlot&gt;</code> — each slot maps a set of layers to a visual cell; one item can occupy multiple layers (e.g. OneHanded + TwoHanded for a shield)</td></tr>
+    <tr><td>Durability</td><td>Integrates with <code>DurabilityManager</code> via <code>RequestUpdateContents()</code></td></tr>
+    <tr><td>Anchor</td><td>Can be snap-anchored to adjacent health bars via <code>AnchorableGump</code> system</td></tr>
+  </table>
+
+  <p>Both paperdolls register as <code>GumpType.PaperDoll</code>. Only one can exist at a time. The decision of which to show is made by <code>Profile.UseModernPaperdoll</code>.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ CONTAINER -->
+  <h2 id="container">ContainerGump (Classic)</h2>
+
+  <p><code>ContainerGump : TextContainerGump</code> displays a container's contents using the UO gumpart art as the background. Items are draggable <code>ItemGump</code> controls positioned by their in-container coordinates.</p>
+
+  <h3>Backpack Style</h3>
+
+  <p>When the container is the player's backpack and the client version ≥ 7.0.53.1, the graphic ID is replaced with a style-specific one from <code>Profile.BackpackStyle</code>:</p>
+
+  <table>
+    <tr><th>Style</th><th>Graphic</th><th>Name</th></tr>
+    <tr><td>0 (default)</td><td>0x003C</td><td>Classic backpack</td></tr>
+    <tr><td>1</td><td>0x775E</td><td>Suede backpack</td></tr>
+    <tr><td>2</td><td>0x7760</td><td>Polar bear backpack</td></tr>
+    <tr><td>3</td><td>0x7762</td><td>Ghoul skin backpack</td></tr>
+  </table>
+
+  <h3>Grid Toggle</h3>
+
+  <p>A "Switch to Grid" button appears when grid containers are enabled (<code>Profile.UseGridLayout</code>). Clicking it opens a <code>GridContainer</code> for the same container serial and closes the classic view. The reverse button in GridContainer reopens the classic view.</p>
+
+  <h3>Corpse Animation</h3>
+
+  <p>When <code>LocalSerial</code> is a corpse, <code>ContainerGump</code> animates the eye gump (graphic <code>0x0045</code>) by cycling between frames on a timer — the classic "blinking eye" on corpse bags.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ GRIDCONTAINER -->
+  <h2 id="gridcontainer">GridContainer <span class="badge new">TazUO</span></h2>
+
+  <p><code>GridContainer : ResizableGump</code> is TazUO's primary inventory management window. It presents all container items in a uniform grid, independent of the UO coordinate system used by classic containers.</p>
+
+  <h3>Key Features</h3>
+
+  <table>
+    <tr><th>Feature</th><th>Detail</th></tr>
+    <tr><td>Resizable</td><td>Drag any edge/corner to resize; item grid reflows automatically</td></tr>
+    <tr><td>Grid cell size</td><td><code>GridItemSize = Math.Round(50 * (GridContainersScale / 100f))</code> — scales with profile setting</td></tr>
+    <tr><td>Search</td><td><code>StbTextBox</code> search box; item names filtered in real time via OPL data</td></tr>
+    <tr><td>Sorting</td><td><code>GridSortMode</code> enum: GraphicAndHue, Name, Quantity — applied to <code>_autoSortContainer</code></td></tr>
+    <tr><td>Border styles</td><td>7 border configurations selectable per container via <code>BorderStyle</code> enum; each maps to a gumpart graphic + border width</td></tr>
+    <tr><td>Grid highlight</td><td>Each item cell checks <code>GridHighlightData</code> and applies background color if a rule matches</td></tr>
+    <tr><td>Quick drop</td><td>Drag items directly onto the Quick Drop backpack button to move to backpack without opening it</td></tr>
+    <tr><td>Corpse distinction</td><td>Corpse containers track separate last-position (<code>_lastCorpseX/Y</code>) so looting doesn't reuse inventory window position</td></tr>
+  </table>
+
+  <h3>Layout Math</h3>
+
+  <pre><code><span class="cm">// Number of columns that fit in the current width</span>
+<span class="kw">int</span> columns = (Width - _borderWidth * <span class="nu">2</span>) / (GridItemSize + X_SPACING);
+
+<span class="cm">// Each cell rendered at:</span>
+<span class="kw">int</span> cellX = _borderWidth + (col * (GridItemSize + X_SPACING));
+<span class="kw">int</span> cellY = TOP_BAR_HEIGHT + LABEL_HEIGHT + (row * (GridItemSize + Y_SPACING));</code></pre>
+
+  <h3>GridContainerSaveData</h3>
+
+  <p>The <code>GridContainerSaveData</code> manager persists per-container layout settings (column count, preferred size, border style) keyed by container serial. This means each bag remembers its own grid configuration independently.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ HEALTHBAR -->
+  <h2 id="healthbar">HealthBarGump</h2>
+
+  <p><code>BaseHealthBarGump : AnchorableGump</code> is the parent for all mobile health bar windows. It provides serial binding, mobile status request, and the anchor system.</p>
+
+  <h3>AnchorableGump</h3>
+
+  <p>Health bars can be snapped together into groups via the <code>AnchorManager</code>. Dragging one bar drags the entire anchored group. This is how party health bars are typically organized into a stacked block.</p>
+
+  <h3>NewTargetSystem Integration</h3>
+
+  <p>When <code>Profile.UseNewTargetSystem</code> is true, the gump bound to <code>TargetManager.NewTargetSystemSerial</code> is highlighted with a colored border. <code>SetNewMobile(uint serial)</code> can be called to re-bind an existing health bar to a different mobile, clearing children and rebuilding instead of creating a new gump.</p>
+
+  <h3>IsLastAttackBar</h3>
+
+  <p>The static <code>LastAttackBar</code> tracks which health bar represents the last attacked target. Only one bar at a time can be the "last attack" bar. GameScene sets this when attack packets are received.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ STATUSGUMP -->
+  <h2 id="statusgump">StatusGump</h2>
+
+  <p><code>StatusGumpBase : Gump</code> is the player status bar showing HP, Mana, Stamina, and character attributes. TazUO provides two concrete implementations chosen by <code>Profile.StatusGumpType</code>:</p>
+
+  <table>
+    <tr><th>Class</th><th>Style</th></tr>
+    <tr><td><code>StatusGumpOld</code></td><td>Classic UO status gump art (small, fixed layout)</td></tr>
+    <tr><td><code>StatusGumpModern</code></td><td>TazUO modern status bar (resizable, extended stats)</td></tr>
+  </table>
+
+  <h3>Mutual Exclusion</h3>
+
+  <p>If <code>Profile.StatusGumpBarMutuallyExclusive</code> is true, opening the StatusGump automatically disposes any existing <code>HealthBarGump</code> for the player (and vice versa), preventing both from showing the same HP information simultaneously.</p>
+
+  <h3>Buff Toggle</h3>
+
+  <p>The BuffIcon button on the status gump opens either <code>ImprovedBuffGump</code> or the classic <code>BuffGump</code> depending on <code>Profile.UseImprovedBuffBar</code>. If the gump is already open, it is brought to front via <code>SetInScreen() + BringOnTop()</code> rather than duplicated.</p>
+
+  <h3>Stat Lockers</h3>
+
+  <p>Three <code>GumpPic</code> controls (lock up, lock down, lock locked) let players cycle the STR/DEX/INT stat lock state. Clicking cycles through the three images and sends an OutgoingPacket to the server.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ JOURNAL -->
+  <h2 id="journal">JournalGump</h2>
+
+  <p><code>JournalGump : Gump</code> is the classic UO journal/chat log. It uses an <code>ExpandableScroll</code> background (a UO art 9-slice that stretches vertically) and a <code>RenderedTextList</code> for the scrollable text content.</p>
+
+  <h3>Dark Mode</h3>
+
+  <p>A checkbox toggles dark mode by applying hue 903 to the scroll graphic, darkening the background art. The state is saved in <code>Profile.JournalDarkMode</code>.</p>
+
+  <h3>Message Type Filters</h3>
+
+  <p>Four <code>Checkbox</code> controls let players filter the log by <code>MessageType</code> category (System, Regular, Emote, Label). The filter state is saved per-session.</p>
+
+  <h3>ResizableJournal (TazUO) <span class="badge new">TazUO</span></h3>
+
+  <p><code>ResizableJournal : ResizableGump</code> replaces the classic journal with a freely resizable window. It adds a tab system for multiple named journal channels (each backed by a separate entry list), timestamp display, and copy-to-clipboard functionality.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ SPELLBOOK -->
+  <h2 id="spellbook">SpellbookGump</h2>
+
+  <p><code>SpellbookGump : Gump</code> is opened when the player double-clicks any spellbook item. It renders the classic book art with left/right page navigation. Spell circles are displayed as pages; clicking a spell icon selects it for casting or dragging to a UseSpellButtonGump shortcut.</p>
+
+  <table>
+    <tr><th>Spellbook type</th><th>Graphic range</th></tr>
+    <tr><td>Standard mage book (8 circles)</td><td>0x0EFA</td></tr>
+    <tr><td>Necromancy book</td><td>0x2253</td></tr>
+    <tr><td>Chivalry book</td><td>0x2252</td></tr>
+    <tr><td>Bushido</td><td>0x2F51</td></tr>
+    <tr><td>Ninjitsu</td><td>0x27F5</td></tr>
+    <tr><td>Spellweaving</td><td>0x2D51</td></tr>
+    <tr><td>Mysticism</td><td>0x2B7E</td></tr>
+  </table>
+
+  <p>The spellbook graphic ID is determined server-side and sent in the item packet. <code>SpellbookGump</code> selects its art based on the item's graphic.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ SKILLS -->
+  <h2 id="skills">Skill Gumps</h2>
+
+  <p>TazUO provides two skills windows selectable via <code>Profile.UseAdvancedSkillMenu</code>:</p>
+
+  <h3>StandardSkillsGump</h3>
+
+  <p>Classic UO skills list: a scrollable column of skill name + value + lock state. Uses the original UO art.</p>
+
+  <h3>SkillGumpAdvanced (TazUO) <span class="badge new">TazUO</span></h3>
+
+  <p>A modern redesign with grouping, sorting, progress bars per skill, and category headers. Reads from <code>World.Player.Skills[]</code> and subscribes to <code>EventSink.SkillsChanged</code> to update in real time as skill values change.</p>
+
+  <h3>SkillButtonGump</h3>
+
+  <p>A floating "Use Skill" shortcut button, similar to <code>UseSpellButtonGump</code>. Players drag a skill name from the skills window to create one. Persists as <code>GumpType.SkillButton</code>.</p>
+
+  <h3>SkillProgressBar (TazUO) <span class="badge new">TazUO</span></h3>
+
+  <p>Shows a visual progress bar for skill gain towards the next 0.1 increment. Appears briefly when a skill gains value.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ WORLDMAP -->
+  <h2 id="worldmap">WorldMapGump</h2>
+
+  <p><code>WorldMapGump</code> renders the Ultima Online world at a configurable zoom level using map data from <code>MapLoader</code>. TazUO extends it with:</p>
+
+  <ul>
+    <li><strong>Markers</strong> — player-placed markers with labels, managed by <code>MarkersManagerGump</code></li>
+    <li><strong>Party display</strong> — party member locations shown as colored dots</li>
+    <tr><td><strong>Goto</strong> — <code>LocationGoGump</code> dialog for jumping to specific coordinates</td></tr>
+    <li><strong>Guild map integration</strong> — shows server-sent guild marks</li>
+    <li><strong>MapWebServer</strong> — live HTTP tile server for browser-based mapping tools</li>
+  </ul>
+
+  <!-- ═══════════════════════════════════════════════════════ SERVER GUMPS -->
+  <h2 id="server-gumps">Server-Created Gumps</h2>
+
+  <p>Some gumps are created by the server via a Generic Gump packet (opcode <code>0xB0</code>). The packet contains a GumpID, Gump layout string, and text array. TazUO parses this into controls:</p>
+
+<div class="flow">Server → Generic Gump Packet (0xB0)
+  PacketHandlers.OnOpenGump()
+  └── Gump layout string parsed:
+       "page 0"          → set ActivePage
+       "resizepic X Y G W H" → new ResizePic
+       "button X Y G1 G2 flag ID" → new Button
+       "text X Y HUE IDX"  → new Label (from lines[IDX])
+       "htmlgump X Y W H IDX BKND SCRL" → new HtmlControl
+       "checkertrans X Y W H" → new CheckerTrans
+       "croppedtext ..."   → new CroppedText
+       (and ~40 more keywords)
+       └── Add to Gumps as Gump with IsFromServer=true</div>
+
+  <p>Server gumps use <code>ServerSerial</code> as their key. When the player responds (clicks a button), a <code>GenericGumpResponse</code> packet is sent with the button ID. Server gumps cannot be saved across sessions (they live only until the server closes them).</p>
+
+  <div class="callout warn">
+    <strong>Server gumps vs. client gumps</strong>
+    Never confuse the two. Server gumps are destroyed when the server sends a "Close Gump" packet or when the player right-clicks. Client gumps are created/destroyed entirely by client code and are independent of server state.
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ PERSISTENCE -->
+  <h2 id="persistence">Gump State Persistence</h2>
+
+  <p>On logout (scene change from GameScene → LoginScene), <code>GameScene.Save()</code> iterates all gumps and writes those with <code>CanBeSaved = true</code> to <code>{ProfilePath}/layout.xml</code>:</p>
+
+<div class="flow">GameScene.Save()
+  └── foreach Gump in UIManager.Gumps
+       ├── if not CanBeSaved → skip
+       └── gump.Save(XmlTextWriter)
+            ├── type (GumpType enum int)
+            ├── x, y (position)
+            ├── serial (LocalSerial)
+            ├── serverSerial
+            ├── isLocked
+            ├── alphaOffset
+            └── gump-specific attributes (override Save())</div>
+
+  <p>On login (GameScene loading), the XML is read and each gump is re-created by type:</p>
+
+<div class="flow">GameScene.Load()
+  └── Deserialize layout.xml
+       └── foreach element in xml
+            ├── read type → GumpType enum
+            ├── switch(type):
+            │    case GumpType.PaperDoll → new PaperDollGump(world, serial, ...)
+            │    case GumpType.Container → reopen container if item still exists
+            │    case GumpType.HealthBar → new HealthBarGump(world, serial)
+            │    case GumpType.GridContainer → new GridContainer(world, serial, ...)
+            │    ...
+            └── gump.Restore(XmlElement)
+                 ├── IsLocked = ...
+                 └── Alpha += alphaOffset</div>
+
+  <h3>Custom Save/Restore</h3>
+
+  <p>Gumps that store additional state override <code>Save()</code> and <code>Restore()</code>:</p>
+
+  <pre><code><span class="kw">public override void</span> <span class="fn">Save</span>(<span class="ty">XmlTextWriter</span> writer)
+{
+    <span class="kw">base</span>.<span class="fn">Save</span>(writer);   <span class="cm">// always call base first (writes type, x, y, serial, lock, alpha)</span>
+    writer.<span class="fn">WriteAttributeString</span>(<span class="st">"myCustomSetting"</span>, _myValue.<span class="fn">ToString</span>());
+}
+
+<span class="kw">public override void</span> <span class="fn">Restore</span>(<span class="ty">XmlElement</span> xml)
+{
+    <span class="kw">base</span>.<span class="fn">Restore</span>(xml);   <span class="cm">// restores lock, alpha</span>
+    <span class="kw">if</span> (<span class="ty">int</span>.<span class="fn">TryParse</span>(xml.<span class="fn">GetAttribute</span>(<span class="st">"myCustomSetting"</span>), <span class="kw">out int</span> v))
+        _myValue = v;
+}</code></pre>
+
+  <h3>Container Auto-Reopen</h3>
+
+  <p>Container gumps (classic and grid) are only re-created on login if the container item still exists in the world. The XML stores the container serial; the restore code calls <code>World.Items.Get(serial)</code> — if it returns null, the gump is skipped.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ FORWARD -->
+  <!-- ══════════════════════════════════════════ MODERNOPTIONS -->
+  <h2 id="modernoptions">ModernOptionsGump <span class="badge new">TazUO</span></h2>
+
+  <p><code>ModernOptionsGump.cs</code> is the game's settings screen, opened via the escape menu or a keybind. It uses a <strong>left-nav / right-content</strong> layout where each nav button corresponds to a <code>PAGE</code> enum value. All page content is built at construction time into a shared <code>options</code> list of <code>SettingsOption</code> objects; visibility is driven by the active page integer.</p>
+
+  <h3>Page enum</h3>
+
+  <p>The <code>PAGE</code> enum (bottom of the file) maps every tab to an integer. Adding a new tab requires:</p>
+  <ol>
+    <li>A new <code>PAGE</code> enum value</li>
+    <li>A <code>CategoryButton(…)</code> call in <code>Build()</code></li>
+    <li>A language string in <code>Language.cs</code></li>
+    <li>A <code>Build&lt;Page&gt;()</code> method that adds <code>SettingsOption</code> objects with the matching page int</li>
+  </ol>
+
+  <h3>Plugins page <span class="badge new">TazUO</span></h3>
+
+  <p>The <strong>Plugins</strong> tab (<code>PAGE.Plugins</code>) scans <code>Data/Plugins/*.dll</code> at options-open time and renders a checkbox per DLL. Toggling a checkbox immediately rewrites <code>Settings.GlobalSettings.Plugins</code> (a <code>string[]</code> in <code>settings.json</code>) and calls <code>Settings.GlobalSettings.Save()</code>. Plugin loading happens at startup only, so a restart notice is shown at the top of the page.</p>
+
+  <table>
+    <tr><th>Detail</th><th>Value</th></tr>
+    <tr><td>Scan directory</td><td><code>CUOEnviroment.ExecutablePath / Data / Plugins / *.dll</code></td></tr>
+    <tr><td>Persisted field</td><td><code>Settings.GlobalSettings.Plugins</code> → <code>settings.json["plugins"]</code></td></tr>
+    <tr><td>Save call</td><td><code>Settings.GlobalSettings.Save()</code> on every toggle</td></tr>
+    <tr><td>Effect timing</td><td>Next startup — plugin host loads from <code>settings.json</code> before the game scene</td></tr>
+    <tr><td>Language string</td><td><code>Language.ButtonPlugins</code> = <code>"Plugins"</code></td></tr>
+  </table>
+
+  <h2 id="forward">Going Forward</h2>
+
+  <h3>When to Use Which Gump Type</h3>
+
+  <table>
+    <tr><th>Situation</th><th>Use</th></tr>
+    <tr><td>Server dialog (NPC shop, bank, crafting)</td><td>Server sends Generic Gump — no client code needed</td></tr>
+    <tr><td>Player inventory view</td><td><code>GridContainer</code> (Profile.UseGridLayout=true) or <code>ContainerGump</code></td></tr>
+    <tr><td>Mobile HP tracking</td><td><code>HealthBarGump</code>; use <code>HealthbarCollectorGump</code> for many targets at once</td></tr>
+    <tr><td>New persistent feature window</td><td>New class extending <code>Gump</code>, add <code>GumpType</code> enum value, register in GameScene restore switch</td></tr>
+    <tr><td>Floating toolbar/shortcut</td><td><code>MacroButtonGump</code> / <code>UseSpellButtonGump</code> pattern</td></tr>
+    <tr><td>Quick dialog (confirm, text input)</td><td><code>MessageBoxGump</code>, <code>QuestionGump</code>, <code>TextEntryDialogGump</code></td></tr>
+  </table>
+
+  <h3>Safe Patterns</h3>
+
+  <table>
+    <tr><th>Do</th><th>Don't</th></tr>
+    <tr><td><code>UIManager.GetGump&lt;T&gt;()?.Dispose(); UIManager.Add(new T(...))</code></td><td>Add a second instance of a singleton gump</td></tr>
+    <tr><td>Override <code>Save()</code> + <code>Restore()</code> for persistent gumps</td><td>Store gump state in static variables (breaks multiple characters)</td></tr>
+    <tr><td><code>RequestUpdateContents()</code> to trigger deferred rebuild</td><td>Clear + re-add children every frame</td></tr>
+    <tr><td>Use <code>ShouldBeSaved = false</code> for transient dialogs</td><td>Let tooltip/dialog gumps pollute the session XML</td></tr>
+    <tr><td>Check item still exists before re-opening container on restore</td><td>Re-open containers unconditionally — item may no longer exist</td></tr>
+  </table>
+
+  <div class="nav-page-links">
+    <a href="07-ui-controls.html">← 07: UI Controls</a>
+    <a href="index.html">↑ Index</a>
+    <a href="09-scripting.html">09: Scripting →</a>
+  </div>
+</main>
+
+</body>
+</html>

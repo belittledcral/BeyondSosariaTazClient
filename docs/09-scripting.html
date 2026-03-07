@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>09 — Scripting System (LegionScripting) · TazUO Codebase Guide</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --card: #1c2128;
+  --border: #30363d;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --yellow: #d29922;
+  --red: #f85149;
+  --purple: #bc8cff;
+  --orange: #ffa657;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 15px; line-height: 1.6; display: flex; }
+nav { width: 260px; min-width: 260px; background: var(--surface); border-right: 1px solid var(--border); height: 100vh; position: sticky; top: 0; overflow-y: auto; padding: 20px 0; }
+nav h2 { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; padding: 0 20px 8px; }
+nav a { display: block; padding: 5px 20px; color: var(--muted); text-decoration: none; font-size: 13px; border-left: 2px solid transparent; }
+nav a:hover, nav a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(88,166,255,.05); }
+nav .section { margin-top: 18px; }
+main { flex: 1; max-width: 960px; padding: 40px 48px; }
+h1 { font-size: 2rem; font-weight: 700; margin-bottom: 8px; }
+h2 { font-size: 1.4rem; font-weight: 600; margin: 40px 0 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+h3 { font-size: 1.1rem; font-weight: 600; margin: 28px 0 8px; color: var(--accent); }
+h4 { font-size: .95rem; font-weight: 600; margin: 18px 0 6px; color: var(--orange); }
+p { margin-bottom: 14px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-family: "Cascadia Code", "Fira Code", monospace; font-size: 13px; color: var(--orange); }
+pre { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 18px; overflow-x: auto; margin: 14px 0; }
+pre code { background: none; border: none; padding: 0; color: var(--text); font-size: 13px; }
+.kw { color: var(--purple); }
+.cm { color: var(--muted); font-style: italic; }
+.st { color: var(--green); }
+.nm { color: var(--orange); }
+.py-kw { color: #ff7b72; }
+.py-fn { color: #d2a8ff; }
+.py-st { color: #a5d6ff; }
+.py-cm { color: var(--muted); font-style: italic; }
+.callout { border-radius: 6px; padding: 14px 18px; margin: 18px 0; border-left: 4px solid; }
+.callout.info { background: rgba(88,166,255,.08); border-color: var(--accent); }
+.callout.good { background: rgba(63,185,80,.08); border-color: var(--green); }
+.callout.warn { background: rgba(210,153,34,.08); border-color: var(--yellow); }
+.callout.danger { background: rgba(248,81,73,.08); border-color: var(--red); }
+.callout strong { display: block; margin-bottom: 4px; }
+table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+th { background: var(--card); color: var(--muted); text-align: left; padding: 8px 12px; border: 1px solid var(--border); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+td { padding: 8px 12px; border: 1px solid var(--border); vertical-align: top; }
+tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+.badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 12px; font-weight: 600; }
+.badge.green { background: rgba(63,185,80,.18); color: var(--green); }
+.badge.blue { background: rgba(88,166,255,.18); color: var(--accent); }
+.badge.orange { background: rgba(255,166,87,.18); color: var(--orange); }
+.badge.purple { background: rgba(188,140,255,.18); color: var(--purple); }
+.flow { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 20px; margin: 14px 0; font-family: monospace; font-size: 13px; line-height: 1.8; white-space: pre; overflow-x: auto; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 14px 0; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 16px; }
+.card h4 { margin-top: 0; }
+.nav-top { color: var(--muted); font-size: 13px; margin-bottom: 32px; }
+.nav-bottom { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="section">
+    <h2>TazUO Docs</h2>
+    <a href="index.html">Index</a>
+    <a href="01-architecture.html">01 · Architecture</a>
+    <a href="02-gameobjects.html">02 · Game Objects</a>
+    <a href="03-network.html">03 · Network</a>
+    <a href="04-rendering.html">04 · Rendering</a>
+    <a href="05-managers-core.html">05 · Managers (Core)</a>
+    <a href="06-managers-tazuo.html">06 · Managers (TazUO)</a>
+    <a href="07-ui-controls.html">07 · UI Controls</a>
+    <a href="08-ui-gumps.html">08 · UI Gumps</a>
+    <a href="09-scripting.html" class="active">09 · Scripting</a>
+  </div>
+  <div class="section">
+    <h2>On This Page</h2>
+    <a href="#overview">Overview</a>
+    <a href="#runtime">IronPython Runtime</a>
+    <a href="#lifecycle">Script Lifecycle</a>
+    <a href="#scoped-api">Scoped API Object</a>
+    <a href="#hierarchy">Object Hierarchy</a>
+    <a href="#pyplayer">PyPlayer</a>
+    <a href="#pymobile">PyMobile</a>
+    <a href="#pyitem">PyItem</a>
+    <a href="#pyentity">PyEntity</a>
+    <a href="#events">Event System</a>
+    <a href="#gump-api">Custom Gumps</a>
+    <a href="#persistent">Persistent Vars</a>
+    <a href="#autogen">Auto-Generated Docs</a>
+    <a href="#new-method">Adding API Methods</a>
+    <a href="#patterns">Safe Patterns</a>
+  </div>
+</nav>
+
+<main>
+  <div class="nav-top"><a href="index.html">← Back to Index</a></div>
+
+  <h1>09 — Scripting System (LegionScripting)</h1>
+  <p>TazUO embeds a full IronPython 3 runtime so players can automate gameplay with Python scripts. The system — called <strong>LegionScripting</strong> — exposes almost the entire game API as thread-safe Python-callable C# objects. This document covers the runtime architecture, script lifecycle, every major class in the hierarchy, the event system, gump creation, persistent variables, and how to extend the API.</p>
+
+  <!-- ───────────────────────────── Overview ───────────────────────────── -->
+  <h2 id="overview">Overview</h2>
+
+  <div class="grid2">
+    <div class="card">
+      <h4>Key Files</h4>
+      <table>
+        <tr><td><code>LegionScripting.cs</code></td><td>Static init/play/stop coordinator</td></tr>
+        <tr><td><code>ScriptFile.cs</code></td><td>Per-script engine + scope container</td></tr>
+        <tr><td><code>API.cs</code></td><td>Scoped API object (one per script)</td></tr>
+        <tr><td><code>PyClasses/</code></td><td>All Py* wrapper classes</td></tr>
+        <tr><td><code>PersistentVars.cs</code></td><td>SQLite-backed cross-session storage</td></tr>
+        <tr><td><code>ScriptBrowser.cs</code></td><td>ImGui public-repo browser</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h4>Directory Layout</h4>
+      <pre><code>LegionScripts/          ← user scripts root
+  MyScript.py
+  MyScript.lscript
+  GroupName/              ← first-level group
+    Sub/                  ← second-level subgroup
+      script.py
+  API.py                  ← ignored (stub file)
+  _hidden.py              ← ignored (underscore prefix)</code></pre>
+    </div>
+  </div>
+
+  <div class="callout info">
+    <strong>Two file extensions are accepted:</strong>
+    <code>.py</code> — standard Python; <code>.lscript</code> — legacy extension. Both run identically via IronPython. Files named <code>API.py</code> or starting with <code>_</code> are excluded from the browser and auto-play lists.
+  </div>
+
+  <!-- ───────────────────────────── IronPython Runtime ───────────────────────────── -->
+  <h2 id="runtime">IronPython Runtime</h2>
+
+  <h3>Runtime Version &amp; Libraries</h3>
+  <p>TazUO bundles <strong>IronPython 3.4.2</strong> in <code>external/iplib/</code>. The runtime is pre-loaded in the background at game startup to reduce the latency of the first script execution:</p>
+
+  <pre><code><span class="cm">// LegionScripting.cs — Init()</span>
+Task.Factory.StartNew(Python.CreateEngine); <span class="cm">// warm-up</span></code></pre>
+
+  <p>Each script gets its <strong>own isolated engine instance</strong> (via <code>Python.CreateEngine()</code>) unless the module cache is enabled, in which case the engine is reused between runs of the same script. The engine's search paths include:</p>
+  <ul style="margin: 10px 0 14px 24px; line-height: 1.8;">
+    <li><code>iplib/</code> — IronPython standard library</li>
+    <li><code>LegionScripts/</code> — user script root (for local imports)</li>
+    <li>The directory of the script being executed</li>
+  </ul>
+
+  <h3>Threading Model</h3>
+  <div class="callout warn">
+    <strong>Critical: Scripts run on their own thread, not the game main thread.</strong>
+    Every access to game state from Python must be marshalled via <code>MainThreadQueue.InvokeOnMainThread()</code> or <code>MainThreadQueue.EnqueueAction()</code>. The Py* wrapper classes do this automatically for every property and method they expose.
+  </div>
+
+  <div class="flow">Python Script Thread                 Game Main Thread
+────────────────────                 ────────────────
+API.Player.Hits                      MainThreadQueue processes
+  → MainThreadQueue.InvokeOnMainThread(...)
+  → blocks until result ready         → executes lambda
+  ← returns int                       → writes result to TaskCompletionSource
+GameActions.Walk(...)
+  → MainThreadQueue.EnqueueAction(...)
+  → fire-and-forget                   → executes lambda on next Update()</div>
+
+  <p><code>InvokeOnMainThread()</code> blocks the script thread using a <code>TaskCompletionSource</code> — it is safe to call from Python but avoid calling it inside a tight loop without a pause, as it will starve the game thread. Use <code>API.Pause(seconds)</code> to yield.</p>
+
+  <!-- ───────────────────────────── Script Lifecycle ───────────────────────────── -->
+  <h2 id="lifecycle">Script Lifecycle</h2>
+
+  <h3>Loading vs Playing</h3>
+  <p>Scripts are <strong>loaded</strong> (registered in <code>LoadedScripts</code>) when discovered on disk — this just reads the file and creates a <code>ScriptFile</code> instance. They are <strong>played</strong> (executed) separately:</p>
+
+  <div class="flow">LegionScripting.Init(world)
+  ├─ Task.Factory.StartNew(Python.CreateEngine)   warm-up engine
+  ├─ LoadScriptsFromFile()                        walk LegionScripts/
+  │    ├─ Up to 2 directory levels deep
+  │    └─ .py / .lscript → new ScriptFile(world, path, name)
+  ├─ LoadLScriptSettings()                        lscript.json
+  ├─ AutoPlayGlobal()                             → PlayScript(f) for each
+  └─ AutoPlayChar()                               → PlayScript(f) for each
+
+PlayScript(script)
+  ├─ script.ReadFromFile()                        re-reads source
+  │    └─ strips "import API" lines               (API is injected into builtins)
+  ├─ new Thread(() => ExecutePythonScript(script))
+  ├─ PyThreads[threadId] = script                 for lookup by thread
+  └─ thread.Start()
+
+ExecutePythonScript(script) [script's own thread]
+  ├─ script.SetupPythonEngine()                   Python.CreateEngine()
+  ├─ script.SetupPythonScope()
+  │    ├─ PythonScope = engine.CreateScope()
+  │    ├─ new API(engine)  → ScopedApi
+  │    └─ builtins["API"] = api                   makes API a builtin
+  ├─ source = engine.CreateScriptSourceFromString(contents, path)
+  ├─ source.Execute(scope)
+  └─ [on exit] MainThreadQueue.EnqueueAction(StopScript)
+
+StopScript(script)
+  ├─ api.StopRequested = true
+  ├─ api.CancellationToken.Cancel()
+  ├─ engine.Runtime.Shutdown()
+  ├─ thread.Interrupt()                           throws ThreadInterruptedException
+  └─ [on thread exit] PythonScriptStopped()
+       ├─ api.CloseGumps()
+       ├─ api.Dispose()
+       └─ scope = null</div>
+
+  <h3>Auto-Play</h3>
+  <p>Settings are stored in <code>Data/lscript.json</code> as <code>LScriptSettings</code>. Two auto-play lists exist:</p>
+  <table>
+    <tr><th>List</th><th>Scope</th><th>Key</th></tr>
+    <tr><td><code>GlobalAutoStartScripts</code></td><td>Runs on every character login</td><td>Script filename</td></tr>
+    <tr><td><code>CharAutoStartScripts</code></td><td>Runs for one specific character</td><td>Username + CharacterName</td></tr>
+  </table>
+
+  <h3>In-Game Commands</h3>
+  <table>
+    <tr><th>Command</th><th>Usage</th></tr>
+    <tr><td><code>playlscript &lt;filename&gt;</code></td><td>Start a script by filename</td></tr>
+    <tr><td><code>stoplscript &lt;filename&gt;</code></td><td>Stop a running script</td></tr>
+    <tr><td><code>togglelscript &lt;filename&gt;</code></td><td>Start if stopped, stop if running</td></tr>
+    <tr><td><code>stopall</code></td><td>Stop every running script</td></tr>
+    <tr><td><code>-updateapi</code></td><td>Download latest API.py from GitHub</td></tr>
+  </table>
+
+  <h3>Error Handling</h3>
+  <p>When a script throws an unhandled exception, <code>ShowScriptError()</code> formats it using IronPython's <code>ExceptionOperations.FormatException()</code>. It then parses the formatted traceback with a regex to extract file paths and line numbers, reads the source file, and opens a <code>ScriptErrorWindow</code> (ImGui) with context lines around the error. The line number is offset by 1 because the <code>import API</code> line was stripped from the source.</p>
+
+  <!-- ───────────────────────────── Scoped API ───────────────────────────── -->
+  <h2 id="scoped-api">The <code>API</code> Object</h2>
+
+  <p><code>API</code> is the single access point for every script. It is injected as a Python <em>builtin</em> so scripts can use <code>API.SomeMethod()</code> without any import. Each running script gets its own isolated <code>API</code> instance (<code>ScopedApi</code>), so one script's journal queue never mixes with another's.</p>
+
+  <h3>Top-Level API Properties</h3>
+  <table>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+    <tr><td><code>API.Player</code></td><td><code>PyPlayer</code></td><td>The local player character</td></tr>
+    <tr><td><code>API.Backpack</code></td><td><code>uint</code></td><td>Serial of player's backpack</td></tr>
+    <tr><td><code>API.Bank</code></td><td><code>uint</code></td><td>Serial of bank container (0 if closed)</td></tr>
+    <tr><td><code>API.Found</code></td><td><code>uint</code></td><td>Last serial found by FindType/NearestMobile/etc</td></tr>
+    <tr><td><code>API.Random</code></td><td><code>Random</code></td><td>Random number generator</td></tr>
+    <tr><td><code>API.Events</code></td><td><code>PyEvents</code></td><td>Event subscription API</td></tr>
+    <tr><td><code>API.Gumps</code></td><td><code>PyGumps</code></td><td>Gump creation API</td></tr>
+    <tr><td><code>API.Profile</code></td><td><code>PyProfile</code></td><td>Player profile settings (static, shared)</td></tr>
+    <tr><td><code>API.StopRequested</code></td><td><code>bool</code></td><td>Set true when script is being stopped</td></tr>
+    <tr><td><code>API.CancellationToken</code></td><td><code>CancellationTokenSource</code></td><td>Use with blocking awaits</td></tr>
+    <tr><td><code>API.LastTargetSerial</code></td><td><code>uint</code></td><td>Serial of last targeted entity</td></tr>
+  </table>
+
+  <h3>Key API Methods (selected)</h3>
+  <table>
+    <tr><th>Method</th><th>Description</th></tr>
+    <tr><td><code>API.Pause(seconds)</code></td><td>Sleep the script thread (float, e.g. 0.5)</td></tr>
+    <tr><td><code>API.Msg(text, hue)</code></td><td>Print overhead text above player</td></tr>
+    <tr><td><code>API.SysMsg(text, hue)</code></td><td>Print to system message / journal</td></tr>
+    <tr><td><code>API.Attack(serial)</code></td><td>Attack a mobile</td></tr>
+    <tr><td><code>API.UseObject(serial)</code></td><td>Double-click an item or mobile</td></tr>
+    <tr><td><code>API.ClickObject(serial)</code></td><td>Single-click</td></tr>
+    <tr><td><code>API.Move(item, container)</code></td><td>Move item into a container</td></tr>
+    <tr><td><code>API.Equip(item)</code></td><td>Equip an item to appropriate layer</td></tr>
+    <tr><td><code>API.BandageSelf()</code></td><td>Use bandage on self (bool return)</td></tr>
+    <tr><td><code>API.ClearLeftHand()</code></td><td>Move left-hand item to backpack</td></tr>
+    <tr><td><code>API.ClearRightHand()</code></td><td>Move right-hand item to backpack</td></tr>
+    <tr><td><code>API.SetWarMode(bool)</code></td><td>Toggle war/peace mode</td></tr>
+    <tr><td><code>API.Walk(direction)</code></td><td>Walk one step (direction string: "north", etc.)</td></tr>
+    <tr><td><code>API.WalkTo(x, y, distance)</code></td><td>Walk to coordinates</td></tr>
+    <tr><td><code>API.CastSpell(spellId)</code></td><td>Cast a spell by ID</td></tr>
+    <tr><td><code>API.Target(serial)</code></td><td>Send target response</td></tr>
+    <tr><td><code>API.FindItem(graphic, container, hue)</code></td><td>Find item by graphic</td></tr>
+    <tr><td><code>API.FindItems(graphic, container, hue)</code></td><td>List of matching items</td></tr>
+    <tr><td><code>API.NearestMobile(notoriety[], range)</code></td><td>Find nearest mobile by notoriety flags</td></tr>
+    <tr><td><code>API.OnHotKey(key, callback)</code></td><td>Register keyboard hotkey callback</td></tr>
+    <tr><td><code>API.ProcessCallbacks()</code></td><td>Dispatch pending UI callbacks</td></tr>
+    <tr><td><code>API.SetSharedVar(name, value)</code></td><td>Write cross-script shared variable</td></tr>
+    <tr><td><code>API.GetSharedVar(name)</code></td><td>Read cross-script shared variable</td></tr>
+    <tr><td><code>API.SetPersistentVar(scope, key, value)</code></td><td>Write SQLite-backed persistent variable</td></tr>
+    <tr><td><code>API.GetPersistentVar(scope, key, default)</code></td><td>Read persistent variable</td></tr>
+    <tr><td><code>API.CreateCooldownBar(delay, label, hue)</code></td><td>Show a timed cooldown bar</td></tr>
+    <tr><td><code>API.Ignore(serial)</code></td><td>Add serial to ignore list</td></tr>
+    <tr><td><code>API.OnIgnoreList(serial)</code></td><td>Check if serial is ignored</td></tr>
+    <tr><td><code>API.ClearIgnoreList()</code></td><td>Clear the ignore list</td></tr>
+  </table>
+
+  <h3>Callback / Hotkey Architecture</h3>
+  <p>Hotkey callbacks cannot call game methods directly because they fire from the keyboard event handler (which may run on a different thread). Instead they are put into a <code>Queue&lt;Action&gt; scheduledCallbacks</code> and drained in order by the script's own loop when it calls <code>API.ProcessCallbacks()</code>:</p>
+
+  <pre><code><span class="py-cm"># Typical event loop pattern in a script</span>
+<span class="py-kw">def</span> <span class="py-fn">on_shift_a</span>():
+    API.SysMsg(<span class="py-st">"SHIFT+A pressed!"</span>)
+
+API.OnHotKey(<span class="py-st">"SHIFT+A"</span>, on_shift_a)
+
+<span class="py-kw">while not</span> API.StopRequested:
+    API.ProcessCallbacks()   <span class="py-cm"># drains the callback queue</span>
+    API.Pause(<span class="py-st">0.1</span>)</code></pre>
+
+  <p>Shared variables (<code>SetSharedVar/GetSharedVar</code>) use a <code>static ConcurrentDictionary&lt;string, object&gt;</code> — they survive across multiple script instances. Persistent variables are backed by SQLite (see <a href="#persistent">below</a>).</p>
+
+  <!-- ───────────────────────────── Object Hierarchy ───────────────────────────── -->
+  <h2 id="hierarchy">PyObject Hierarchy</h2>
+
+  <div class="flow">PyGameObject         ← graphic, hue, position (base)
+  └─ PyEntity          ← serial, name, Destroy()
+       ├─ PyMobile     ← hits/mana/stam, notoriety, backpack, mount
+       │    └─ PyPlayer ← full stat block, skills, equipment layers, locks
+       └─ PyItem       ← amount, container, rootContainer, highlight match
+
+PyBaseControl          ← Add(), SetRect(), GetX/Y, visibility
+  └─ PyBaseGump        ← IsDisposed, PacketGumpText, SetInScreen()
+
+PyGumps                ← factory for gump creation (API.Gumps)
+PyEvents               ← event subscription manager (API.Events)
+PyJournalEntry         ← one journal line (text, type, hue, name)
+PyItemData             ← static ItemData (flags, name, stackable, etc.)
+Buff                   ← active buff/debuff object (title, duration)
+PyProfile              ← selected profile settings</div>
+
+  <div class="callout info">
+    <strong>Implicit serial conversion:</strong> <code>PyEntity</code> defines <code>implicit operator uint</code>, so you can pass any <code>PyMobile</code>, <code>PyPlayer</code>, or <code>PyItem</code> directly to any method that expects a <code>uint</code> serial:
+    <pre style="margin: 8px 0 0;"><code>API.Attack(enemy)  <span class="py-cm"># enemy is a PyMobile, auto-converts to serial</span></code></pre>
+  </div>
+
+  <!-- ───────────────────────────── PyPlayer ───────────────────────────── -->
+  <h2 id="pyplayer">PyPlayer</h2>
+  <p><code>PyPlayer : PyMobile</code> — wraps <code>PlayerMobile</code>. Every property calls <code>MainThreadQueue.InvokeOnMainThread(GetPlayerUnsafe()?.Prop ?? default)</code>. Accessed as <code>API.Player</code>.</p>
+
+  <h4>Property Groups</h4>
+  <table>
+    <tr><th>Group</th><th>Properties</th></tr>
+    <tr><td>Location</td><td><code>X</code>, <code>Y</code>, <code>Z</code></td></tr>
+    <tr><td>Primary Stats</td><td><code>Strength</code>, <code>Dexterity</code>, <code>Intelligence</code>, + <em>Increase</em> variants</td></tr>
+    <tr><td>Stat Locks</td><td><code>StrLock</code>, <code>DexLock</code>, <code>IntLock</code> (<code>Lock</code> enum: Up/Down/Locked)</td></tr>
+    <tr><td>HP/Mana/Stam</td><td><code>HitPointsIncrease</code>, <code>ManaIncrease</code>, <code>StaminaIncrease</code>, + <em>Regeneration</em> variants</td></tr>
+    <tr><td>Resistances</td><td><code>PhysicalResistance</code>–<code>EnergyResistance</code>, <code>Max*</code> variants</td></tr>
+    <tr><td>Combat</td><td><code>DamageMin/Max</code>, <code>HitChanceIncrease</code>, <code>SwingSpeedIncrease</code>, <code>DefenseChanceIncrease</code></td></tr>
+    <tr><td>Magic</td><td><code>SpellDamageIncrease</code>, <code>FasterCasting</code>, <code>FasterCastRecovery</code>, <code>LowerManaCost</code>, <code>LowerReagentCost</code>, <code>IsCasting</code>, <code>IsRecovering</code></td></tr>
+    <tr><td>Other</td><td><code>Luck</code>, <code>Gold</code>, <code>TithingPoints</code>, <code>Weight/WeightMax</code>, <code>StatsCap</code>, <code>Followers/Max</code>, <code>EnhancePotions</code></td></tr>
+    <tr><td>State</td><td><code>IsHidden</code>, <code>IsWalking</code>, <code>InWarMode</code> (get+set)</td></tr>
+    <tr><td>Skills</td><td><code>GetSkill(name)</code> → skill value; <code>GetSkillCap(name)</code></td></tr>
+    <tr><td>Equipment</td><td><code>GetEquipment(layer)</code> → <code>PyItem</code>; <code>FindItemByLayer(layer)</code></td></tr>
+  </table>
+
+  <pre><code><span class="py-cm"># Check if player needs healing</span>
+player = API.Player
+<span class="py-kw">if</span> player.HitsDiff &gt; <span class="py-st">15</span>:
+    API.BandageSelf()
+
+<span class="py-cm"># Read a skill value</span>
+hiding = player.GetSkill(<span class="py-st">"Hiding"</span>)
+API.SysMsg(<span class="py-fn">f</span><span class="py-st">"Hiding: {hiding}"</span>)</code></pre>
+
+  <!-- ───────────────────────────── PyMobile ───────────────────────────── -->
+  <h2 id="pymobile">PyMobile</h2>
+  <p><code>PyMobile : PyEntity</code> — wraps any <code>Mobile</code> (NPCs, monsters, other players). Instances are returned by <code>API.NearestMobile()</code>, <code>API.FindMobile()</code>, and event callbacks.</p>
+
+  <table>
+    <tr><th>Property / Method</th><th>Type</th><th>Notes</th></tr>
+    <tr><td><code>Hits</code>, <code>HitsMax</code>, <code>HitsDiff</code></td><td><code>int</code></td><td>HitsDiff = Max − Current</td></tr>
+    <tr><td><code>Mana</code>, <code>ManaMax</code>, <code>ManaDiff</code></td><td><code>int</code></td><td></td></tr>
+    <tr><td><code>Stamina</code>, <code>StaminaMax</code>, <code>StamDiff</code></td><td><code>int</code></td><td></td></tr>
+    <tr><td><code>IsDead</code></td><td><code>bool</code></td><td></td></tr>
+    <tr><td><code>IsPoisoned</code></td><td><code>bool</code></td><td></td></tr>
+    <tr><td><code>IsYellowHits</code></td><td><code>bool</code></td><td>Often means invulnerable</td></tr>
+    <tr><td><code>IsHuman</code></td><td><code>bool</code></td><td>Heuristic based on body graphic</td></tr>
+    <tr><td><code>IsRenamable</code></td><td><code>bool</code></td><td>True for player's pets</td></tr>
+    <tr><td><code>Notoriety</code></td><td><code>API.Notoriety</code> enum</td><td>Innocent/Gray/Criminal/Enemy/Murderer/etc.</td></tr>
+    <tr><td><code>InWarMode</code></td><td><code>bool</code></td><td>Read-only on PyMobile; read+write on PyPlayer</td></tr>
+    <tr><td><code>Backpack</code></td><td><code>PyItem</code></td><td>Mobile's backpack item (null if none)</td></tr>
+    <tr><td><code>Mount</code></td><td><code>PyItem</code></td><td>Mount item (null if unmounted)</td></tr>
+    <tr><td><code>__class__</code></td><td><code>string</code></td><td><code>"PyMobile"</code> or <code>"PyPlayer"</code></td></tr>
+  </table>
+
+  <p>The internal <code>GetMobileUnsafe()</code> caches the <code>Mobile</code> reference and re-looks it up by serial if the cache is stale — safe to call only from within a <code>MainThreadQueue</code> callback.</p>
+
+  <!-- ───────────────────────────── PyItem ───────────────────────────── -->
+  <h2 id="pyitem">PyItem</h2>
+  <p><code>PyItem : PyEntity</code> — wraps an <code>Item</code>. Returned by <code>API.FindItem()</code>, <code>API.FindItems()</code>, container iteration, and equipment accessors.</p>
+
+  <table>
+    <tr><th>Property / Method</th><th>Notes</th></tr>
+    <tr><td><code>Amount</code></td><td>Stack size</td></tr>
+    <tr><td><code>IsCorpse</code></td><td>True if this item is a player/NPC corpse</td></tr>
+    <tr><td><code>IsContainer</code></td><td>True if bags, chests, etc.</td></tr>
+    <tr><td><code>Opened</code></td><td>Whether the container gump is open</td></tr>
+    <tr><td><code>Container</code></td><td>Direct parent container serial</td></tr>
+    <tr><td><code>RootContainer</code></td><td>Outermost container serial (player backpack, etc.)</td></tr>
+    <tr><td><code>RootEntity</code></td><td>Returns <code>PyMobile</code> or <code>PyItem</code> for the root</td></tr>
+    <tr><td><code>MatchesHighlight</code></td><td>True if GridHighlight rule matched</td></tr>
+    <tr><td><code>MatchingHighlightName</code></td><td>Name of matched GridHighlight rule</td></tr>
+    <tr><td><code>GetItemData()</code></td><td>Returns <code>PyItemData</code> with static art data</td></tr>
+    <tr><td><code>GetContainerGump()</code></td><td>Returns <code>PyBaseControl</code> wrapping the open GridContainer or ContainerGump</td></tr>
+  </table>
+
+  <!-- ───────────────────────────── PyEntity ───────────────────────────── -->
+  <h2 id="pyentity">PyEntity (base)</h2>
+  <p><code>PyEntity : PyGameObject</code> — shared base for all serializeable game objects.</p>
+
+  <table>
+    <tr><th>Member</th><th>Notes</th></tr>
+    <tr><td><code>Serial</code> (<code>uint</code>, readonly)</td><td>UO unique ID; captured at construction time, never changes</td></tr>
+    <tr><td><code>Name</code> (<code>string</code>)</td><td>Display name from <code>Entity.Name</code></td></tr>
+    <tr><td><code>Graphic</code></td><td>Art graphic ID (inherited from PyGameObject)</td></tr>
+    <tr><td><code>Hue</code></td><td>Colour hue (inherited from PyGameObject)</td></tr>
+    <tr><td><code>X</code>, <code>Y</code>, <code>Z</code></td><td>World tile coordinates (overridden by subclasses)</td></tr>
+    <tr><td><code>Distance</code></td><td>Tile distance from player</td></tr>
+    <tr><td><code>ToString()</code></td><td><code>&lt;PyEntity Serial=0x… Graphic=0x… Hue=0x… Pos=(x,y,z)&gt;</code></td></tr>
+    <tr><td><code>Destroy()</code></td><td>Removes the entity from the client (reappears on relog)</td></tr>
+    <tr><td><code>implicit operator uint</code></td><td>Auto-converts to serial for API method calls</td></tr>
+  </table>
+
+  <p><code>GetEntity()</code> (protected) checks the cached reference — if the serial still matches, returns it directly. Otherwise calls <code>World.Get(Serial)</code> via <code>MainThreadQueue</code>. This means short-lived Python objects don't cause dangling pointer problems even if the game object is recycled.</p>
+
+  <!-- ───────────────────────────── Event System ───────────────────────────── -->
+  <h2 id="events">Event System</h2>
+
+  <p>Events are accessed through <code>API.Events</code> (a <code>PyEvents</code> instance). Each method registers a Python callback to fire when the corresponding game event occurs. Callbacks are delivered via <code>ScheduleCallback()</code> and must be drained by <code>API.ProcessCallbacks()</code> in the script's main loop.</p>
+
+  <h3>Available Events</h3>
+  <table>
+    <tr><th>Method</th><th>Callback Receives</th><th>Description</th></tr>
+    <tr><td><code>API.Events.OnPlayerHitsChanged(cb)</code></td><td><code>int new_hits</code></td><td>Player HP changed</td></tr>
+    <tr><td><code>API.Events.OnBuffAdded(cb)</code></td><td><code>Buff</code> object</td><td>Buff/debuff applied</td></tr>
+    <tr><td><code>API.Events.OnBuffRemoved(cb)</code></td><td><code>Buff</code> object</td><td>Buff/debuff removed</td></tr>
+    <tr><td><code>API.Events.OnPlayerDeath(cb)</code></td><td><code>uint</code> serial</td><td>Player died</td></tr>
+    <tr><td><code>API.Events.OnOpenContainer(cb)</code></td><td><code>uint</code> serial</td><td>Container gump opened</td></tr>
+    <tr><td><code>API.Events.OnPlayerMoved(cb)</code></td><td><code>PositionChangedArgs</code></td><td>Player moved one tile; <code>.NewLocation</code> available</td></tr>
+    <tr><td><code>API.Events.OnItemCreated(cb)</code></td><td><code>uint</code> serial</td><td>New item added to world</td></tr>
+  </table>
+
+  <div class="callout info">
+    <strong>Journal entries</strong> are delivered differently — they are pushed into a per-script <code>ConcurrentQueue&lt;PyJournalEntry&gt;</code> by the global <code>EventSink.JournalEntryAdded</code> handler in <code>LegionScripting.cs</code>. Scripts drain it with:
+    <pre style="margin: 8px 0 0;"><code><span class="py-kw">while</span> API.JournalEntries.Count &gt; <span class="py-st">0</span>:
+    entry = API.JournalEntries.Dequeue()
+    <span class="py-kw">if</span> <span class="py-st">"You are poisoned"</span> <span class="py-kw">in</span> entry.Text:
+        API.UseItem(curePotion)</code></pre>
+    The queue is capped at <code>Profile.MaxJournalEntries</code>; oldest entries are silently dropped when full.
+  </div>
+
+  <h3>Event Implementation Pattern (<code>[GenApiEvent]</code>)</h3>
+  <p><code>PyEvents</code> is a <code>partial</code> class. Each event is declared with the <code>[GenApiEvent("EventSinkEventName")]</code> attribute on a partial method. A source generator (or build-time equivalent) produces the subscription/unsubscription boilerplate, wiring the C# <code>EventSink</code> event to call <code>_api.ScheduleCallback(callback, args...)</code>.</p>
+
+  <pre><code><span class="cm">// PyEvents.cs — declaration only</span>
+[<span class="nm">GenApiEvent</span>(<span class="st">"OnPositionChanged"</span>)]
+<span class="kw">public partial void</span> <span class="nm">OnPlayerMoved</span>(<span class="kw">object</span> callback);
+
+<span class="cm">// Generated glue (conceptual)</span>
+<span class="kw">public partial void</span> <span class="nm">OnPlayerMoved</span>(<span class="kw">object</span> callback)
+{
+    EventSink.OnPositionChanged += (sender, args) =&gt;
+        _api.ScheduleCallback(callback, args);
+}</code></pre>
+
+  <!-- ───────────────────────────── Custom Gumps ───────────────────────────── -->
+  <h2 id="gump-api">Custom Gumps from Python</h2>
+
+  <p>Scripts can create fully interactive UI windows using <code>API.Gumps</code> (<code>PyGumps</code>). All gumps created through the API are tracked in <code>api.gumps</code> (a <code>ConcurrentBag&lt;Gump&gt;</code>) and are automatically closed when the script stops (unless <code>keepOpen=True</code>).</p>
+
+  <h3>Quick Example</h3>
+  <pre><code><span class="py-cm"># Create a movable window with a label and button</span>
+g = API.Gumps.CreateGump(acceptMouseInput=<span class="py-kw">True</span>, canMove=<span class="py-kw">True</span>)
+g.SetRect(<span class="py-st">100</span>, <span class="py-st">100</span>, <span class="py-st">200</span>, <span class="py-st">120</span>)
+
+label = API.Gumps.CreateGumpLabel(<span class="py-st">"Hello World!"</span>, hue=<span class="py-st">0x34</span>)
+label.SetRect(<span class="py-st">10</span>, <span class="py-st">10</span>, <span class="py-st">180</span>, <span class="py-st">30</span>)
+g.Add(label)
+
+btn = API.Gumps.CreateGumpButton(<span class="py-st">"Click Me"</span>)
+btn.SetRect(<span class="py-st">60</span>, <span class="py-st">60</span>, <span class="py-st">80</span>, <span class="py-st">30</span>)
+g.Add(btn)
+
+API.Gumps.AddGump(g)
+
+<span class="py-kw">while not</span> API.StopRequested:
+    API.ProcessCallbacks()
+    <span class="py-kw">if</span> btn.HasBeenClicked():
+        API.SysMsg(<span class="py-st">"Button clicked!"</span>)
+    API.Pause(<span class="py-st">0.1</span>)</code></pre>
+
+  <h3>Gump Factory Methods (<code>API.Gumps.*</code>)</h3>
+  <table>
+    <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+    <tr><td><code>CreateGump(acceptMouseInput, canMove, keepOpen)</code></td><td><code>PyBaseGump</code></td><td>Blank movable window</td></tr>
+    <tr><td><code>CreateModernGump(x, y, w, h, resizable, minW, minH, onResized)</code></td><td><code>PyNineSliceGump</code></td><td>Nine-slice styled panel with optional resize handle</td></tr>
+    <tr><td><code>AddGump(g)</code></td><td><code>void</code></td><td>Register gump with UIManager (makes it visible)</td></tr>
+    <tr><td><code>CreateGumpLabel(text, hue, font, isTTF)</code></td><td><code>PyLabel</code></td><td>Text label</td></tr>
+    <tr><td><code>CreateGumpButton(text, hue)</code></td><td><code>PyButton / PyNiceButton</code></td><td>Clickable button</td></tr>
+    <tr><td><code>CreateGumpCheckbox(text, hue)</code></td><td><code>PyCheckbox</code></td><td>Checkbox with label</td></tr>
+    <tr><td><code>CreateGumpRadioButton(text, groupId)</code></td><td><code>PyRadioButton</code></td><td>Grouped radio button</td></tr>
+    <tr><td><code>CreateGumpTextInput(placeholder, maxLength)</code></td><td><code>PyTTFTextInputField</code></td><td>TTF text entry field</td></tr>
+    <tr><td><code>CreateGumpScrollArea(w, h)</code></td><td><code>PyScrollArea</code></td><td>Scrollable container area</td></tr>
+    <tr><td><code>CreateGumpProgressBar(w, h, min, max, current)</code></td><td><code>PySimpleProgressBar</code></td><td>Progress / HP bar</td></tr>
+    <tr><td><code>CreateGumpDropDown(options)</code></td><td><code>PyControlComboBox</code></td><td>Drop-down selector</td></tr>
+    <tr><td><code>CreateGumpPic(graphic, hue)</code></td><td><code>PyGumpPic</code></td><td>UO gumpart image</td></tr>
+    <tr><td><code>CreateStaticPic(graphic, hue)</code></td><td><code>PyStatic</code></td><td>UO art static image</td></tr>
+    <tr><td><code>CreateResizableStaticPic(graphic, hue)</code></td><td><code>PyResizableStaticPic</code></td><td>Resizable art image</td></tr>
+    <tr><td><code>CreateTiledGumpPic(graphic, hue)</code></td><td><code>PyTiledGumpPic</code></td><td>Tiled/repeated gumpart</td></tr>
+    <tr><td><code>CreateAlphaBlendControl()</code></td><td><code>PyAlphaBlendControl</code></td><td>Semi-transparent background</td></tr>
+    <tr><td><code>CreateMenuItem(text)</code></td><td><code>PyMenuItem</code></td><td>Right-click context menu item</td></tr>
+  </table>
+
+  <h3>Control Methods (PyBaseControl)</h3>
+  <p>All controls (and gumps) share these methods via <code>PyBaseControl</code>:</p>
+
+  <div class="grid2">
+    <div>
+      <pre><code>control.Add(child)         <span class="py-cm"># add child control</span>
+control.GetX() / GetY()    <span class="py-cm"># position</span>
+control.SetX(n) / SetY(n)
+control.SetPos(x, y)
+control.SetWidth(n)
+control.SetHeight(n)
+control.SetRect(x, y, w, h)
+control.IsVisible          <span class="py-cm"># bool r/w</span>
+control.IsDisposed         <span class="py-cm"># bool</span>
+control.CanMove            <span class="py-cm"># bool r/w</span></code></pre>
+    </div>
+    <div>
+      <pre><code><span class="py-cm"># Gump-specific (PyBaseGump)</span>
+gump.IsDisposed
+gump.PacketGumpText        <span class="py-cm"># layout string</span>
+gump.CanCloseWithRightClick
+gump.LayerOrder
+gump.SetInScreen()         <span class="py-cm"># clamp to screen</span>
+gump.CenterXInScreen()
+gump.CenterYInScreen()
+
+<span class="py-cm"># Button-specific</span>
+btn.HasBeenClicked()       <span class="py-cm"># true once per click</span>
+btn.IsClicked              <span class="py-cm"># currently held down</span></code></pre>
+    </div>
+  </div>
+
+  <!-- ───────────────────────────── Persistent Vars ───────────────────────────── -->
+  <h2 id="persistent">Persistent Variables</h2>
+
+  <p>LegionScripting provides cross-session, SQLite-backed variable storage via <code>PersistentVars</code>. Variables are namespaced by <strong>scope</strong>:</p>
+
+  <table>
+    <tr><th>Scope</th><th>Key = (enum)</th><th>Scope Key</th></tr>
+    <tr><td>Global</td><td><code>API.PersistentVar.Global</code></td><td><code>"GLOBAL"</code> — same across all characters and servers</td></tr>
+    <tr><td>Server</td><td><code>API.PersistentVar.Server</code></td><td><code>ServerName</code></td></tr>
+    <tr><td>Account</td><td><code>API.PersistentVar.Account</code></td><td><code>ServerName + Username</code></td></tr>
+    <tr><td>Character</td><td><code>API.PersistentVar.Char</code></td><td><code>ServerName + Username + CharName</code></td></tr>
+  </table>
+
+  <p>Storage is in <code>Data/legionvars.db</code>. Access from Python:</p>
+
+  <pre><code><span class="py-cm"># Save and retrieve a character-scoped variable</span>
+API.SetPersistentVar(API.PersistentVar.Char, <span class="py-st">"lastX"</span>, <span class="py-fn">str</span>(API.Player.X))
+
+x = API.GetPersistentVar(API.PersistentVar.Char, <span class="py-st">"lastX"</span>, <span class="py-st">"0"</span>)
+API.SysMsg(<span class="py-fn">f</span><span class="py-st">"Last X: {x}"</span>)</code></pre>
+
+  <div class="callout info">
+    <strong>Storage is asynchronous:</strong> <code>SaveVar</code> calls <code>SaveVarAsync(...).ConfigureAwait(false)</code> so it doesn't block the script thread. The DB is protected by a <code>SemaphoreSlim(1,1)</code>. An old <code>legionvars.dat</code> flat-file format is automatically migrated to SQLite on first run and backed up as <code>.bak</code>.
+  </div>
+
+  <!-- ───────────────────────────── Auto-Generated Docs ───────────────────────────── -->
+  <h2 id="autogen">Auto-Generated Documentation</h2>
+
+  <p>The <code>src/APIToMarkdown/</code> project uses <strong>Roslyn</strong> (<code>Microsoft.CodeAnalysis.CSharp</code>) to parse each <code>API.cs</code> and <code>PyClasses/*.cs</code> file at build time and emit Markdown + a stub <code>API.py</code> file:</p>
+
+  <div class="flow">Build step: APIToMarkdown.exe
+  ├─ For each .cs file in API + PyClasses/
+  │    ├─ CSharpSyntaxTree.ParseText(source)
+  │    ├─ Walk ClassDeclarationSyntax
+  │    │    ├─ GenClassHeader()       → # ClassName + XML summary
+  │    │    ├─ GenClassProperties()   → property table
+  │    │    ├─ GenClassFields()       → field table
+  │    │    ├─ GenClassEnums()        → enum tables
+  │    │    └─ GenClassMethods()      → method table with XML docs + code examples
+  │    └─ Also emits Python stub for IDE autocomplete
+  └─ Output → LegionScripting/docs/*.md + docs/API.py</div>
+
+  <p>Outputs live in <code>src/ClassicUO.Client/LegionScripting/docs/</code>:</p>
+  <ul style="margin: 10px 0 14px 24px; line-height: 1.8;">
+    <li><code>API.md</code> — main API class (properties, methods, enums)</li>
+    <li><code>PyPlayer.md</code>, <code>PyMobile.md</code>, <code>PyItem.md</code>, etc. — one file per class</li>
+    <li><code>Events.md</code>, <code>Gumps.md</code>, <code>PyBaseControl.md</code> — sub-object docs</li>
+    <li><code>notes.md</code> — handwritten additional notes</li>
+    <li><code>API.py</code> — Python stub with type hints for VS Code IntelliSense</li>
+  </ul>
+
+  <div class="callout good">
+    <strong>Using the API.py stub:</strong> Place <code>API.py</code> in the same folder as your scripts, add <code>import API</code> (or <code>from API import *</code>) at the top, and VS Code / PyCharm will offer autocompletion for all API methods. The import line is automatically stripped at execution time — it has no runtime cost.
+  </div>
+
+  <!-- ───────────────────────────── Script Browser ───────────────────────────── -->
+  <h2 id="browser">Script Browser</h2>
+
+  <p><code>ScriptBrowser</code> is a <code>SingletonImGuiWindow</code> that lets players browse the public <code>PlayTazUO/PublicLegionScripts</code> GitHub repository and download scripts directly in-game. It uses the GitHub Contents API (<code>api.github.com/repos/…/contents/…</code>) with a TTL-based <code>GitHubContentCache</code>. Downloaded scripts are saved to <code>LegionScripts/</code> and immediately available.</p>
+
+  <!-- ───────────────────────────── Adding API Methods ───────────────────────────── -->
+  <h2 id="new-method">Adding a New Python API Method</h2>
+
+  <p>To expose a new game capability to scripts:</p>
+
+  <h4>Step 1 — Add the C# method to <code>API.cs</code></h4>
+  <pre><code><span class="cm">/// &lt;summary&gt;</span>
+<span class="cm">/// Shout a message in the game world.</span>
+<span class="cm">/// Example:</span>
+<span class="cm">/// ```py</span>
+<span class="cm">/// API.Shout("For honor!")</span>
+<span class="cm">/// ```</span>
+<span class="cm">/// &lt;/summary&gt;</span>
+<span class="cm">/// &lt;param name="text"&gt;The text to shout&lt;/param&gt;</span>
+<span class="kw">public void</span> <span class="nm">Shout</span>(<span class="kw">string</span> text)
+    =&gt; MainThreadQueue.InvokeOnMainThread(
+        () =&gt; GameActions.Say(World, text, <span class="nm">MessageType</span>.Yell, <span class="nm">Constants</span>.SPEECH_HUE)
+    );</code></pre>
+
+  <div class="callout warn">
+    <strong>Always use MainThreadQueue.</strong> Game state is single-threaded. Calling <code>GameActions.*</code> directly from the script thread will cause race conditions or crashes.
+    <ul style="margin-top: 6px;">
+      <li>Use <code>InvokeOnMainThread()</code> when you need a return value (blocks the script thread until complete)</li>
+      <li>Use <code>EnqueueAction()</code> for fire-and-forget operations</li>
+    </ul>
+  </div>
+
+  <h4>Step 2 — (Optional) Add a new event to <code>PyEvents.cs</code></h4>
+  <pre><code><span class="cm">/// &lt;summary&gt;Called when player says something.&lt;/summary&gt;</span>
+[<span class="nm">GenApiEvent</span>(<span class="st">"OnSpeech"</span>)]
+<span class="kw">public partial void</span> <span class="nm">OnSpeech</span>(<span class="kw">object</span> callback);</code></pre>
+
+  <p>The <code>[GenApiEvent]</code> attribute tells the source generator to wire the <code>EventSink.OnSpeech</code> event → <code>ScheduleCallback(callback, args)</code> automatically.</p>
+
+  <h4>Step 3 — Rebuild and regenerate docs</h4>
+  <pre><code>dotnet build -c Release</code></pre>
+  <p>The <code>APIToMarkdown</code> build step will pick up the new XML doc comment and add it to the generated Markdown and <code>API.py</code> stub.</p>
+
+  <h4>Step 4 — Test from Python</h4>
+  <pre><code><span class="py-cm"># Test in a minimal script</span>
+API.Shout(<span class="py-st">"For honor!"</span>)
+API.Pause(<span class="py-st">1</span>)</code></pre>
+
+  <!-- ───────────────────────────── Safe Patterns ───────────────────────────── -->
+  <h2 id="patterns">Going Forward — Safe Patterns</h2>
+
+  <div class="callout good">
+    <strong>Standard script loop template:</strong>
+    <pre style="margin: 8px 0 0;"><code><span class="py-kw">while not</span> API.StopRequested:
+    <span class="py-cm"># 1. Process UI callbacks (button clicks, event callbacks)</span>
+    API.ProcessCallbacks()
+
+    <span class="py-cm"># 2. Read game state (auto-marshalled via MainThreadQueue)</span>
+    player = API.Player
+    <span class="py-kw">if</span> player.HitsDiff &gt; <span class="py-st">20</span>:
+        API.BandageSelf()
+
+    <span class="py-cm"># 3. Always pause — never spin-lock</span>
+    API.Pause(<span class="py-st">0.25</span>)</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <strong>Common pitfalls to avoid:</strong>
+    <ul style="margin-top: 6px; line-height: 1.8;">
+      <li><strong>No bare spin-loops</strong> — always call <code>API.Pause()</code>. A tight loop starves the main thread because <code>InvokeOnMainThread</code> contends for the same dispatcher queue.</li>
+      <li><strong>Don't store PyEntity references long-term</strong> — game objects can be destroyed. Re-query each loop iteration or check <code>entity.IsDestroyed</code> via <code>GetEntity()</code>.</li>
+      <li><strong>Check <code>API.StopRequested</code></strong> in all loops. This is the clean shutdown signal. Scripts that ignore it will be killed by <code>Thread.Interrupt()</code> which throws <code>ThreadInterruptedException</code> at the next blocking call.</li>
+      <li><strong>Don't call game APIs from event callbacks directly</strong> — they fire from the main thread via <code>ScheduleCallback</code>; use <code>ProcessCallbacks()</code> to pick them up on the script thread, then call game methods.</li>
+      <li><strong>Shared vars (<code>SetSharedVar</code>) use a static dictionary</strong> — they persist until explicitly cleared with <code>ClearSharedVars()</code>. Large objects held in shared vars will prevent GC.</li>
+      <li><strong>Don't call blocking IO inside <code>InvokeOnMainThread</code></strong> — it blocks the entire game frame. Do async IO outside the main-thread call.</li>
+    </ul>
+  </div>
+
+  <div class="callout info">
+    <strong>Performance tip:</strong> Reading many properties in sequence each incurs a round-trip through <code>MainThreadQueue</code>. Batch reads by building a snapshot object on the main thread:
+    <pre style="margin: 8px 0 0;"><code><span class="py-kw">def</span> <span class="py-fn">get_snapshot</span>():
+    p = API.Player
+    <span class="py-kw">return</span> {<span class="py-st">'hits'</span>: p.Hits, <span class="py-st">'mana'</span>: p.Mana, <span class="py-st">'stam'</span>: p.Stamina}
+
+snap = get_snapshot()   <span class="py-cm"># 3 invocations at once is fine</span></code></pre>
+  </div>
+
+  <table>
+    <thead><tr><th>Pattern</th><th>Safe?</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>API.Player.Hits</code> in a loop</td><td><span class="badge green">✓</span></td><td>Auto-marshalled; add Pause()</td></tr>
+      <tr><td><code>GameActions.Attack()</code> directly</td><td><span class="badge" style="background:rgba(248,81,73,.18);color:var(--red);">✗</span></td><td>Not thread-safe; use <code>API.Attack(serial)</code></td></tr>
+      <tr><td><code>World.Player.Hits</code> directly</td><td><span class="badge" style="background:rgba(248,81,73,.18);color:var(--red);">✗</span></td><td>Unsynchronised read; race with packet thread</td></tr>
+      <tr><td><code>MainThreadQueue.InvokeOnMainThread()</code></td><td><span class="badge green">✓</span></td><td>Correct marshalling for return values</td></tr>
+      <tr><td><code>MainThreadQueue.EnqueueAction()</code></td><td><span class="badge green">✓</span></td><td>Correct for fire-and-forget</td></tr>
+      <tr><td>Storing <code>PyItem</code> in a list between frames</td><td><span class="badge orange">⚠</span></td><td>Item may be destroyed; re-validate each use</td></tr>
+      <tr><td>Adding Python callbacks via <code>API.Events.*</code></td><td><span class="badge green">✓</span></td><td>Always paired with ProcessCallbacks() loop</td></tr>
+      <tr><td>Using <code>API.Gumps.CreateGump(keepOpen=False)</code></td><td><span class="badge green">✓</span></td><td>Auto-closed when script stops</td></tr>
+    </tbody>
+  </table>
+
+  <div class="nav-bottom">
+    <a href="08-ui-gumps.html">← 08 · UI Gumps</a>
+    <a href="index.html">Back to Index →</a>
+  </div>
+</main>
+
+</body>
+</html>

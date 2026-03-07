@@ -196,6 +196,34 @@ namespace ClassicUO
                 }
             }
 
+            // If the UO directory is missing, let the user browse for it before giving up.
+            if ((flags & INVALID_UO_DIRECTORY) != 0)
+            {
+                string chosen = PromptForUODirectory();
+                if (chosen != null)
+                {
+                    Settings.GlobalSettings.UltimaOnlineDirectory = chosen;
+                    Settings.GlobalSettings.Save();
+                    flags &= ~INVALID_UO_DIRECTORY;
+
+                    // Re-check version now that we have a real directory.
+                    if (!ClientVersionHelper.IsClientVersionValid(Settings.GlobalSettings.ClientVersion, out _))
+                    {
+                        if (ClientVersionHelper.TryParseFromFile(Path.Combine(chosen, "client.exe"), out string foundVersion)
+                            && ClientVersionHelper.IsClientVersionValid(foundVersion, out _))
+                        {
+                            Settings.GlobalSettings.ClientVersion = foundVersion;
+                            Settings.GlobalSettings.Save();
+                            flags &= ~INVALID_UO_VERSION;
+                        }
+                    }
+                    else
+                    {
+                        flags &= ~INVALID_UO_VERSION;
+                    }
+                }
+            }
+
             if (flags != 0)
             {
                 if ((flags & INVALID_UO_DIRECTORY) != 0)
@@ -254,6 +282,67 @@ namespace ClassicUO
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Shows a native folder-picker dialog so the user can locate their UO installation.
+        /// Returns the chosen path (guaranteed to contain tiledata.mul), or null if cancelled.
+        /// </summary>
+        private static string PromptForUODirectory()
+        {
+            // Need SDL video to show the dialog.
+            if (!SDL.SDL_Init(SDL.SDL_InitFlags.SDL_INIT_VIDEO))
+                return null;
+
+            string result = null;
+            bool done = false;
+
+            // Keep a strong reference to the delegate so the GC doesn't collect it
+            // before the native callback fires.
+            SDL.SDL_DialogFileCallback callback = null;
+            callback = (userdata, filelist, filter) =>
+            {
+                if (filelist != IntPtr.Zero)
+                {
+                    // filelist is a null-terminated array of UTF-8 string pointers.
+                    IntPtr first = Marshal.ReadIntPtr(filelist, 0);
+                    if (first != IntPtr.Zero)
+                    {
+                        string path = Marshal.PtrToStringUTF8(first);
+                        if (!string.IsNullOrEmpty(path))
+                            result = path;
+                    }
+                }
+                done = true;
+            };
+
+            // Loop so the user can retry if they pick a folder without tiledata.mul.
+            while (true)
+            {
+                done = false;
+                result = null;
+
+                SDL.SDL_ShowOpenFolderDialog(callback, IntPtr.Zero, IntPtr.Zero,
+                    CUOEnviroment.ExecutablePath, false);
+
+                // Pump the SDL event loop until the callback fires.
+                while (!done)
+                    SDL.SDL_WaitEventTimeout(out _, 100);
+
+                if (result == null)
+                    break; // user cancelled
+
+                if (File.Exists(Path.Combine(result, "tiledata.mul")))
+                    break; // valid directory
+
+                Client.ShowErrorMessage(
+                    $"The selected folder is not a valid Ultima Online directory.\n" +
+                    $"Could not find 'tiledata.mul' in:\n{result}\n\n" +
+                    $"Please select the folder that contains your Ultima Online data files.");
+            }
+
+            SDL.SDL_QuitSubSystem(SDL.SDL_InitFlags.SDL_INIT_VIDEO);
+            return result;
         }
 
         private static void ReadSettingsFromArgs(string[] args)

@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TazUO — 01: Architecture &amp; Entry Points</title>
+  <style>
+    :root {
+      --bg:       #0f1117;
+      --surface:  #181c27;
+      --card:     #1e2233;
+      --border:   #2a3050;
+      --accent:   #4f8ef7;
+      --accent2:  #7c5cfc;
+      --good:     #3ecf8e;
+      --warn:     #f5a623;
+      --bad:      #e05252;
+      --text:     #cdd6f4;
+      --muted:    #7480a0;
+      --code-bg:  #12151f;
+      --code-key: #cba6f7;
+      --code-str: #a6e3a1;
+      --code-num: #fab387;
+      --code-cmt: #585b75;
+      --code-typ: #89dceb;
+      --code-fn:  #89b4fa;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Layout ── */
+    .page { display: flex; min-height: 100vh; }
+    nav {
+      width: 270px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 28px 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    main {
+      flex: 1;
+      padding: 48px 56px;
+      max-width: 1000px;
+    }
+    @media (max-width: 860px) {
+      .page { flex-direction: column; }
+      nav { width: 100%; height: auto; position: static; }
+      main { padding: 28px 20px; }
+    }
+
+    /* ── Nav ── */
+    .nav-logo {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent);
+      padding: 0 24px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .nav-logo .badge {
+      font-size: 0.65rem;
+      background: var(--accent2);
+      color: #fff;
+      padding: 2px 7px;
+      border-radius: 99px;
+      font-weight: 600;
+      letter-spacing: .04em;
+    }
+    .nav-section {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      padding: 20px 24px 6px;
+    }
+    nav ul { list-style: none; }
+    nav ul li a {
+      display: block;
+      padding: 6px 24px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    nav ul li a:hover, nav ul li a.active {
+      color: var(--text);
+      border-left-color: var(--accent);
+      background: rgba(79,142,247,.06);
+      text-decoration: none;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin-bottom: 36px;
+    }
+    h2 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: #e0e6ff;
+      margin: 56px 0 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    h2:first-of-type { border-top: none; margin-top: 0; }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 32px 0 10px;
+    }
+    h4 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--code-typ);
+      margin: 20px 0 8px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    p { margin-bottom: 14px; }
+    ul, ol { padding-left: 22px; margin-bottom: 14px; }
+    li { margin-bottom: 4px; }
+    strong { color: #e0e6ff; }
+
+    /* ── Callout boxes ── */
+    .callout {
+      border-left: 4px solid;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 18px 0;
+      font-size: 0.94rem;
+    }
+    .callout.info    { border-color: var(--accent);  background: rgba(79,142,247,.08); }
+    .callout.good    { border-color: var(--good);    background: rgba(62,207,142,.08); }
+    .callout.warn    { border-color: var(--warn);    background: rgba(245,166,35,.08); }
+    .callout.danger  { border-color: var(--bad);     background: rgba(224,82,82,.08);  }
+    .callout .label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 4px;
+    }
+    .callout.info   .label { color: var(--accent); }
+    .callout.good   .label { color: var(--good);   }
+    .callout.warn   .label { color: var(--warn);   }
+    .callout.danger .label { color: var(--bad);    }
+
+    /* ── Code ── */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      overflow-x: auto;
+      margin: 14px 0 20px;
+      font-size: 0.87rem;
+      line-height: 1.6;
+    }
+    code {
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    }
+    p code, li code {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.86em;
+      color: var(--code-typ);
+    }
+    .kw  { color: var(--code-key); }
+    .ty  { color: var(--code-typ); }
+    .fn  { color: var(--code-fn);  }
+    .st  { color: var(--code-str); }
+    .nm  { color: var(--code-num); }
+    .cm  { color: var(--code-cmt); font-style: italic; }
+    .hl  { background: rgba(79,142,247,.15); display: block; margin: 0 -20px; padding: 0 20px; }
+
+    /* ── Flow diagram ── */
+    .flow {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px 28px;
+      margin: 14px 0 20px;
+      font-family: monospace;
+      font-size: 0.88rem;
+      line-height: 1.9;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    /* ── Table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 20px;
+      font-size: 0.9rem;
+    }
+    th {
+      background: var(--card);
+      color: var(--accent);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+    td code { font-size: 0.83rem; }
+
+    /* ── File pill ── */
+    .file {
+      display: inline-block;
+      background: #1a1f35;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 10px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: var(--code-fn);
+      margin: 2px 2px;
+    }
+
+    /* ── Doc nav footer ── */
+    .doc-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    .doc-nav a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 18px;
+      font-weight: 600;
+      transition: border-color .15s;
+    }
+    .doc-nav a:hover { border-color: var(--accent); text-decoration: none; }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+<!-- ══════════════════════════ SIDEBAR NAV ══════════════════════════ -->
+<nav>
+  <div class="nav-logo">
+    TazUO Docs <span class="badge">01</span>
+  </div>
+
+  <div class="nav-section">This Document</div>
+  <ul>
+    <li><a href="#what-is-tazuo">What is TazUO?</a></li>
+    <li><a href="#startup">Program startup</a></li>
+    <li><a href="#game-singleton">Client.Game singleton</a></li>
+    <li><a href="#game-loop">The game loop</a></li>
+    <li><a href="#time-ticks">Time.Ticks</a></li>
+    <li><a href="#scenes">Scene system</a></li>
+    <li><a href="#profile">Profile &amp; config</a></li>
+    <li><a href="#input">Input handling</a></li>
+    <li><a href="#going-forward">Going forward</a></li>
+  </ul>
+
+  <div class="nav-section">All Documents</div>
+  <ul>
+    <li><a href="index.html">Index</a></li>
+    <li><a href="01-architecture.html" class="active">01 Architecture</a></li>
+    <li><a href="02-gameobjects.html">02 Game Objects</a></li>
+    <li><a href="03-network.html">03 Network</a></li>
+    <li><a href="04-rendering.html">04 Rendering</a></li>
+    <li><a href="05-managers-core.html">05 Core Managers</a></li>
+    <li><a href="06-managers-tazuo.html">06 TazUO Managers</a></li>
+    <li><a href="07-ui-controls.html">07 UI Controls</a></li>
+    <li><a href="08-ui-gumps.html">08 UI Gumps</a></li>
+    <li><a href="09-scripting.html">09 Scripting</a></li>
+  </ul>
+</nav>
+
+<!-- ══════════════════════════ MAIN CONTENT ══════════════════════════ -->
+<main>
+
+<h1>Architecture &amp; Entry Points</h1>
+<p class="subtitle">
+  How TazUO boots, what the game loop looks like, and the core infrastructure every
+  system builds on: the scene stack, profile config, and input pipeline.
+</p>
+
+<!-- ─────────────────────── WHAT IS TAZUO ─────────────────────── -->
+<h2 id="what-is-tazuo">What is TazUO?</h2>
+
+<p>
+  TazUO is a feature-complete fork of <strong>ClassicUO</strong>, the open-source reimplementation
+  of the Ultima Online 2D client. The original ClassicUO faithfully reproduced the legacy client;
+  TazUO extends it with community-requested quality-of-life features, a Python scripting engine
+  (LegionScripting / IronPython), grid-based inventory management, modern ImGui overlays,
+  and deep per-character customisation.
+</p>
+
+<p>
+  Architecturally the two codebases are close — the same UO file-format parsers, the same
+  FNA/XNA rendering pipeline, the same network packet structure. The significant additions in
+  TazUO live in:
+</p>
+
+<table>
+  <thead>
+    <tr><th>Area</th><th>TazUO additions</th><th>Location</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Scripting</td><td>IronPython 3.4.2 runtime with full C# API bridge</td><td><code>LegionScripting/</code></td></tr>
+    <tr><td>Inventory</td><td>Grid containers, property-based highlighting, auto-loot</td><td><code>Game/UI/Gumps/GridContainer.cs</code></td></tr>
+    <tr><td>HUD</td><td>Buff bars, cooldown bars, overhead health lines, name overhead</td><td><code>Game/Managers/</code></td></tr>
+    <tr><td>Config</td><td>SQLite-backed settings + 500+ per-profile JSON properties</td><td><code>Configuration/</code></td></tr>
+    <tr><td>ImGui</td><td>Modern overlay UI coexisting with legacy UO gumps</td><td><code>Game/UI/ImGuiControls/</code></td></tr>
+    <tr><td>Data persistence</td><td>WorldDataManager for per-map saved data</td><td><code>Game/Managers/WorldDataManager.cs</code></td></tr>
+  </tbody>
+</table>
+
+<div class="callout info">
+  <div class="label">Dependency on FNA</div>
+  TazUO uses <strong>FNA</strong> (an XNA reimplementation) rather than MonoGame. This means
+  <code>Microsoft.Xna.Framework</code> types (<code>Game</code>, <code>GameTime</code>,
+  <code>Texture2D</code>, <code>GraphicsDevice</code>, etc.) are provided by FNA and compiled
+  into the output directory as native libraries. The game loop contract (<code>Initialize</code>,
+  <code>LoadContent</code>, <code>Update</code>, <code>Draw</code>) is the same as classic XNA.
+</div>
+
+<!-- ─────────────────────── STARTUP ─────────────────────── -->
+<h2 id="startup">Program Startup</h2>
+
+<p>
+  The entry point lives in <span class="file">src/ClassicUO.Client/Main.cs</span> inside
+  the <code>Bootstrap</code> static class. The <code>Main()</code> method calls <code>Boot()</code>,
+  which is also reachable via an unmanaged <code>[UnmanagedCallersOnly]</code> export named
+  <code>Initialize</code> — used when the client is loaded as a plugin DLL by a launcher.
+</p>
+
+<div class="flow">Bootstrap.Main(args)
+  └─ Bootstrap.Boot(pluginHost, args)
+        │
+        ├─ CopyRequiredLibs()              // copy x64/lib64/osx native DLLs next to exe
+        ├─ CultureInfo → InvariantCulture  // ensure consistent number formatting
+        ├─ Language.Load()                 // load localised strings
+        ├─ Log.Start(LogTypes.All)         // initialise logging
+        ├─ CUOEnviroment.GameThread = Thread.CurrentThread
+        │
+        ├─ AppDomain.UnhandledException   // crash handler → HTML crash log
+        │
+        ├─ ReadSettingsFromArgs(args)      // first pass: -settings path override
+        ├─ Settings.GlobalSettings = ConfigurationResolver.Load(...)
+        ├─ ReadSettingsFromArgs(args)      // second pass: override individual fields
+        │
+        ├─ Validate UO directory &amp; client version
+        │    (flags INVALID_UO_DIRECTORY | INVALID_UO_VERSION)
+        │
+        ├─ Set FNA environment variables
+        │    FNA3D_D3D11_FORCE_BITBLT=1
+        │    FNA3D_FORCE_DRIVER = OpenGL | Vulkan (per settings)
+        │
+        └─ Client.Run(pluginHost)          // enter the game</div>
+
+<h3>Native Library Copy</h3>
+<p>
+  Before anything else, <code>CopyRequiredLibs()</code> copies the platform-appropriate
+  native DLLs (SDL3, FNA3D, FAudio, etc.) from a versioned subdirectory to the executable
+  directory, so FNA can load them by name. The source directories are:
+</p>
+<ul>
+  <li><code>external/x64/</code> — Windows x64</li>
+  <li><code>external/lib64/</code> — Linux x64</li>
+  <li><code>external/osx/</code> or <code>external/osx-arm/</code> — macOS</li>
+</ul>
+<p>
+  Files are only copied if missing or if the sizes differ, so repeated launches are fast.
+</p>
+
+<h3>Command-Line Arguments</h3>
+<p>
+  <code>ReadSettingsFromArgs()</code> parses <code>-key value</code> pairs and directly
+  mutates <code>Settings.GlobalSettings</code>. It is called twice — once before loading
+  the JSON (to allow <code>-settings &lt;path&gt;</code> to redirect the config file) and
+  once after (to let CLI arguments override whatever the JSON contained).
+</p>
+
+<table>
+  <thead>
+    <tr><th>Argument</th><th>Effect</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>-settings &lt;path&gt;</code></td><td>Use an alternative <code>settings.json</code></td></tr>
+    <tr><td><code>-uopath &lt;dir&gt;</code></td><td>Override UO installation directory</td></tr>
+    <tr><td><code>-clientversion &lt;ver&gt;</code></td><td>e.g. <code>7.0.95.0</code></td></tr>
+    <tr><td><code>-ip</code> / <code>-port</code></td><td>Server address</td></tr>
+    <tr><td><code>-fps &lt;n&gt;</code></td><td>Clamped to MIN_FPS–MAX_FPS</td></tr>
+    <tr><td><code>-debug</code></td><td>Enable debug overlays</td></tr>
+    <tr><td><code>-profiler</code></td><td>Enable the built-in profiler</td></tr>
+    <tr><td><code>-force_driver 1|2</code></td><td>1=OpenGL, 2=Vulkan</td></tr>
+    <tr><td><code>-highdpi</code></td><td>Enable high-DPI mode</td></tr>
+    <tr><td><code>-skiploginscreen</code></td><td>Auto-login with saved credentials</td></tr>
+    <tr><td><code>-packetlog [opcodes]</code></td><td>Enable packet logging (hex opcodes comma-separated)</td></tr>
+  </tbody>
+</table>
+
+<!-- ─────────────────────── GAME SINGLETON ─────────────────────── -->
+<h2 id="game-singleton">The Client.Game Singleton</h2>
+
+<p>
+  <span class="file">src/ClassicUO.Client/Client.cs</span> contains two types that act as
+  the global hub of the entire client:
+</p>
+
+<pre><code><span class="cm">// The static façade — every system reaches through this</span>
+<span class="kw">internal static class</span> <span class="ty">Client</span>
+{
+    <span class="kw">public static</span> <span class="ty">GameController</span> Game { <span class="kw">get</span>; <span class="kw">private set</span>; }
+    <span class="kw">public static</span> <span class="ty">SQLSettingsManager</span> Settings { <span class="kw">get</span>; <span class="kw">private set</span>; }
+
+    <span class="kw">public static void</span> <span class="fn">Run</span>(<span class="ty">IPluginHost</span> pluginHost)
+    {
+        Settings = <span class="kw">new</span> <span class="ty">SQLSettingsManager</span>();
+        <span class="kw">using</span> (Game = <span class="kw">new</span> <span class="ty">GameController</span>(pluginHost))
+        {
+            Game.<span class="fn">Run</span>();   <span class="cm">// blocks until window closes</span>
+        }
+    }
+}
+
+<span class="cm">// The asset + world container, accessible via Client.Game.UO</span>
+<span class="kw">sealed class</span> <span class="ty">UltimaOnline</span>
+{
+    <span class="kw">public</span> <span class="ty">World</span>              World      { <span class="kw">get</span>; <span class="kw">private set</span>; }
+    <span class="kw">public</span> <span class="ty">GameCursor</span>         GameCursor  { <span class="kw">get</span>; <span class="kw">private set</span>; }
+    <span class="kw">public</span> Renderer.Animations.<span class="ty">Animations</span> Animations { <span class="kw">get</span>; ... }
+    <span class="kw">public</span> Renderer.Arts.<span class="ty">Art</span>             Arts       { <span class="kw">get</span>; ... }
+    <span class="kw">public</span> Renderer.Gumps.<span class="ty">Gump</span>           Gumps      { <span class="kw">get</span>; ... }
+    <span class="kw">public</span> <span class="ty">UOFileManager</span>      FileManager { <span class="kw">get</span>; <span class="kw">private set</span>; }
+    <span class="cm">// ... Texmaps, Lights, MultiMaps, Sounds</span>
+}</code></pre>
+
+<p>
+  <code>UltimaOnline.Load()</code> is called once from <code>GameController.LoadContent()</code>.
+  It validates the UO client path and version, maps the version to a set of <code>ClientFlags</code>
+  (T2A, RE, LBR, AOS, SE, SA expansions), loads all UO files via <code>UOFileManager</code>, then
+  creates the GPU-side renderer objects and the <code>World</code>.
+</p>
+
+<div class="callout good">
+  <div class="label">Access pattern</div>
+  From anywhere in the client, the canonical access paths are:
+  <ul style="margin-top:8px; margin-bottom:0;">
+    <li><code>Client.Game</code> — the FNA game/window/graphics device</li>
+    <li><code>Client.Game.UO.World</code> — all game objects</li>
+    <li><code>Client.Game.UO.Arts</code> — art texture cache</li>
+    <li><code>Client.Game.Scene</code> — the currently active scene</li>
+    <li><code>ProfileManager.CurrentProfile</code> — per-character settings</li>
+  </ul>
+</div>
+
+<!-- ─────────────────────── GAME LOOP ─────────────────────── -->
+<h2 id="game-loop">The Game Loop</h2>
+
+<p>
+  <code>GameController</code> extends FNA's <code>Microsoft.Xna.Framework.Game</code>.
+  FNA drives the loop at the configured framerate (default 60 FPS, configurable up to
+  <code>Constants.MAX_FPS</code>). The key overrides:
+</p>
+
+<div class="flow">FNA runtime calls per frame:
+──────────────────────────────────────────────────
+GameController.Update(GameTime gt)
+  │
+  ├─ Time.Ticks = (uint)gt.TotalGameTime.TotalMilliseconds
+  ├─ Time.Delta = (float)gt.ElapsedGameTime.TotalSeconds
+  │
+  ├─ Process SDL events (keyboard, mouse, window resize…)
+  │    → Mouse.ButtonPress / ButtonRelease
+  │    → Keyboard events → UIManager routing
+  │
+  ├─ Scene?.Update(Time.Ticks)
+  │    └─ [if GameScene] World.Update()
+  │                       UIManager.Update()
+  │                       Managers update…
+  │
+  └─ Plugin callbacks (if plugins loaded)
+
+GameController.Draw(GameTime gt)
+  │
+  ├─ [suppress if minimised or no scene]
+  │
+  ├─ Scene?.Draw(_uoSpriteBatch)
+  │    └─ [if GameScene]
+  │         GameScene.Draw()
+  │           ├─ Render to _worldRenderTarget
+  │           ├─ Apply lighting to _lightRenderTarget
+  │           └─ Composite + post-process to backbuffer
+  │
+  ├─ UIManager.Draw(_uoSpriteBatch)   // gumps on top
+  ├─ ImGui.Render()                   // ImGui overlay
+  └─ GraphicsDevice.Present()
+──────────────────────────────────────────────────</div>
+
+<h3>Fixed vs Variable Timestep</h3>
+<p>
+  <code>SetRefreshRate(fps)</code> computes a <code>FrameDelay</code> array with two entries:
+  the normal frame delay and a halved value used for background frames (when the window has
+  no focus). The profiler tracks elapsed time and skips Update/Draw if called too early,
+  implementing a manual fixed-timestep on top of FNA's own timing.
+</p>
+
+<pre><code><span class="cm">// From GameController.SetRefreshRate()</span>
+<span class="ty">FrameDelay</span>[<span class="nm">0</span>] = FrameDelay[<span class="nm">1</span>] = (<span class="kw">uint</span>)frameDelay;   <span class="cm">// foreground</span>
+<span class="ty">FrameDelay</span>[<span class="nm">1</span>] = FrameDelay[<span class="nm">1</span>] >> <span class="nm">1</span>;                  <span class="cm">// background (half speed)</span>
+_intervalFixedUpdate[<span class="nm">0</span>] = frameDelay;
+_intervalFixedUpdate[<span class="nm">1</span>] = <span class="nm">217</span>;                        <span class="cm">// 5 FPS minimum</span></code></pre>
+
+<h3>Scene Switching</h3>
+<p>
+  <code>GameController.SetScene(scene)</code> disposes the current scene and loads the new one:
+</p>
+
+<pre><code><span class="kw">public void</span> <span class="fn">SetScene</span>(<span class="ty">Scene</span> scene)
+{
+    Scene?.<span class="fn">Dispose</span>();    <span class="cm">// tear down old scene's managers, gumps</span>
+    Scene = scene;
+    Scene?.<span class="fn">Load</span>();       <span class="cm">// initialise new scene</span>
+    drawScene = Scene != <span class="kw">null</span> &amp;&amp; Scene.IsLoaded;
+}</code></pre>
+
+<!-- ─────────────────────── TIME.TICKS ─────────────────────── -->
+<h2 id="time-ticks">Time.Ticks — The Global Timer</h2>
+
+<p>
+  <span class="file">src/ClassicUO.Client/Time.cs</span> is a two-field static class that
+  every system uses for timing:
+</p>
+
+<pre><code><span class="kw">internal static class</span> <span class="ty">Time</span>
+{
+    <span class="kw">public static uint</span>  Ticks;   <span class="cm">// milliseconds since game started</span>
+    <span class="kw">public static float</span> Delta;   <span class="cm">// elapsed seconds this frame</span>
+}</code></pre>
+
+<p>
+  <code>Time.Ticks</code> is updated at the top of every <code>Update()</code> call from
+  <code>GameTime.TotalGameTime.TotalMilliseconds</code> cast to <code>uint</code>. This gives
+  roughly 49 days before wrapping — long enough for any play session.
+</p>
+
+<div class="callout warn">
+  <div class="label">Common usage pattern</div>
+  Systems schedule future actions by storing a deadline and comparing against
+  <code>Time.Ticks</code>. Always use <code>&gt;</code> not <code>==</code> to avoid
+  missing the exact tick:
+</div>
+
+<pre><code><span class="cm">// Correct — fires as soon as the deadline passes</span>
+<span class="kw">if</span> (<span class="ty">Time</span>.Ticks > _nextActionTime)
+{
+    <span class="fn">DoAction</span>();
+    _nextActionTime = <span class="ty">Time</span>.Ticks + <span class="nm">500</span>;   <span class="cm">// schedule next in 500 ms</span>
+}
+
+<span class="cm">// Wrong — may never fire if a frame is skipped</span>
+<span class="kw">if</span> (<span class="ty">Time</span>.Ticks == _nextActionTime) { ... }</code></pre>
+
+<!-- ─────────────────────── SCENES ─────────────────────── -->
+<h2 id="scenes">Scene System</h2>
+
+<p>
+  A <strong>Scene</strong> is the top-level game state. There is exactly one active scene at a time.
+  Each scene has a <code>Load()</code>, <code>Update(uint ticks)</code>, <code>Draw()</code>, and
+  <code>Dispose()</code> lifecycle. The three concrete scenes are:
+</p>
+
+<table>
+  <thead>
+    <tr><th>Scene class</th><th>When active</th><th>Responsibility</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>LoginScene</code></td>
+      <td>Before login</td>
+      <td>Server selection, login UI, initial network handshake</td>
+    </tr>
+    <tr>
+      <td><code>CharacterCreationScene</code></td>
+      <td>After login, creating a new character</td>
+      <td>Character appearance editor, skill/stat selection</td>
+    </tr>
+    <tr>
+      <td><code>GameScene</code></td>
+      <td>In-game</td>
+      <td>World rendering, all game managers, player input, UI</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="flow">Program launch
+  │
+  └─ [LoginScene]
+        │  (select server, enter credentials, authenticate)
+        │
+        ├─ [New character] → CharacterCreationScene
+        │                          │
+        │              (create character, confirm)
+        │                          │
+        └─ [Enter world] ──────────┘
+                │
+                └─ [GameScene]  ← stays active until logout/disconnect
+                      │
+                      └─ [Logout] → LoginScene (recycled)</div>
+
+<h3>GameScene Initialisation</h3>
+<p>
+  <code>GameScene</code> is constructed with the current <code>World</code> instance and
+  immediately applies profile settings to the camera and viewport:
+</p>
+
+<pre><code><span class="kw">public</span> <span class="fn">GameScene</span>(<span class="ty">World</span> world)
+{
+    _world = world;
+    _autoUnequipActionManager = <span class="kw">new</span> <span class="ty">AutoUnequipActionManager</span>(_world);
+
+    <span class="ty">Camera</span>.Zoom = <span class="ty">ProfileManager</span>.CurrentProfile.DefaultScale;
+    <span class="ty">Client</span>.Game.<span class="fn">SetScale</span>(<span class="ty">ProfileManager</span>.CurrentProfile.RenderScale);
+    _world.ClientViewRange = <span class="ty">ProfileManager</span>.CurrentProfile.ViewRange;
+    <span class="ty">Camera</span>.Bounds.X = ProfileManager.CurrentProfile.GameWindowPosition.X;
+    <span class="ty">Camera</span>.Bounds.Width = ProfileManager.CurrentProfile.GameWindowSize.X;
+    <span class="cm">// ... etc</span>
+}</code></pre>
+
+<!-- ─────────────────────── PROFILE ─────────────────────── -->
+<h2 id="profile">Profile &amp; Configuration System</h2>
+
+<p>
+  TazUO has two tiers of configuration:
+</p>
+
+<table>
+  <thead>
+    <tr><th>Tier</th><th>Class</th><th>File</th><th>Scope</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Global settings</strong></td>
+      <td><code>Settings</code></td>
+      <td><code>settings.json</code> (next to exe)</td>
+      <td>Server IP, UO path, window position, FPS, plugins</td>
+    </tr>
+    <tr>
+      <td><strong>Per-character profile</strong></td>
+      <td><code>Profile</code></td>
+      <td><code>Data/Profiles/{user}/{server}/{char}/profile.json</code></td>
+      <td>All gameplay and UI preferences</td>
+    </tr>
+    <tr>
+      <td><strong>SQLite settings</strong></td>
+      <td><code>SQLSettingsManager</code></td>
+      <td><code>Data/settings.db</code></td>
+      <td>Fast key-value store, used for game scale and recent values</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Profile Loading Flow</h3>
+
+<div class="flow">Login completes, server sends "enter world" packet
+  │
+  └─ PacketHandlers → ProfileManager.Load(server, user, charName)
+        │
+        ├─ Path = Data/Profiles/{user}/{server}/{charName}/
+        ├─ Load profile.json via ConfigurationResolver
+        │   (falls back to default.json if missing)
+        │
+        ├─ ValidateFields() — ensure min window size 600×480
+        ├─ AfterLoad()     — initialise derived state
+        │
+        └─ EventSink.OnPlayerCreated → LoadCharScopedSettings()</div>
+
+<h3>Profile Contents</h3>
+<p>
+  <code>Profile</code> contains 500+ JSON-serialised properties across these categories:
+</p>
+
+<table>
+  <thead>
+    <tr><th>Category</th><th>Example properties</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Sound</td><td><code>EnableSound</code>, <code>SoundVolume</code>, <code>EnableMusic</code>, <code>MusicVolume</code></td></tr>
+    <tr><td>Chat / fonts</td><td><code>ChatFont</code>, <code>SpeechDelay</code>, <code>SaveJournalToFile</code></td></tr>
+    <tr><td>Hue colours</td><td><code>SpeechHue</code>, <code>InnocentHue</code>, <code>MurdererHue</code>, <code>PoisonHue</code></td></tr>
+    <tr><td>Rendering</td><td><code>DefaultScale</code>, <code>RenderScale</code>, <code>ViewRange</code>, <code>EnableVSync</code></td></tr>
+    <tr><td>Window</td><td><code>GameWindowPosition</code>, <code>GameWindowSize</code>, <code>WindowBorderless</code></td></tr>
+    <tr><td>Grid / containers</td><td><code>GridHighlightSetup</code> — list of highlight rules per container type</td></tr>
+    <tr><td>TazUO features</td><td>Buff bar positions, cooldown bar settings, overhead names config</td></tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <div class="label">Serialisation context</div>
+  Profile uses <code>ProfileJsonContext</code>, a source-generated <code>JsonSerializerContext</code>
+  with a custom snake_case naming policy. Any new property you add to <code>Profile</code> must be
+  a supported JSON-serialisable type. Complex custom types need to be added to the context.
+  The context is declared in the same file as <code>Profile</code> via
+  <code>[JsonSerializable(typeof(Profile))]</code>.
+</div>
+
+<h3>Saving the Profile</h3>
+<p>
+  Profiles are saved automatically at key moments (logout, options dialog close) via
+  <code>ConfigurationResolver.Save(profile, path, ProfileJsonContext.DefaultToUse.Profile)</code>.
+  There is no auto-save timer — changes that aren't explicitly saved will be lost on crash.
+</p>
+
+<!-- ─────────────────────── INPUT ─────────────────────── -->
+<h2 id="input">Input Handling</h2>
+
+<p>
+  Input in TazUO flows through SDL3 events, processed in the <code>GameController.Update()</code>
+  SDL event loop, and then distributed to the static <code>Mouse</code> and <code>Keyboard</code>
+  classes before being routed to <code>UIManager</code>.
+</p>
+
+<div class="flow">SDL3 event queue (polled in GameController.Update)
+  │
+  ├─ SDL_EVENT_MOUSE_BUTTON_DOWN/UP
+  │    └─ Mouse.ButtonPress(type) / Mouse.ButtonRelease(type)
+  │         → SDL_CaptureMouse(true/false)
+  │
+  ├─ SDL_EVENT_MOUSE_MOTION
+  │    └─ Mouse.Position = new Point(x, y)
+  │         → UIManager.OnMouseMoving(x, y)   — hover / drag
+  │
+  ├─ SDL_EVENT_MOUSE_WHEEL
+  │    └─ Mouse.WheelScrolled += delta
+  │         → UIManager.OnMouseWheel
+  │
+  ├─ SDL_EVENT_KEY_DOWN / KEY_UP
+  │    └─ Keyboard.Alt / Shift / Ctrl updated
+  │       Keyboard.KeyDownEvent?.Invoke(keyString)
+  │         → UIManager.OnKeyboardDown
+  │         → MacroManager.CheckHotkeys
+  │
+  └─ SDL_EVENT_TEXT_INPUT
+       └─ UIManager.OnTextInput(text)</div>
+
+<h3>Mouse</h3>
+<p>
+  <code>Mouse</code> (<span class="file">Input/Mouse.cs</span>) is a static class with button state
+  properties for each button type and the current cursor position:
+</p>
+
+<pre><code><span class="kw">public static</span> <span class="ty">Point</span>  Position        <span class="cm">// current cursor, updated every motion event</span>
+<span class="kw">public static bool</span>   LButtonPressed  <span class="cm">// left button held</span>
+<span class="kw">public static bool</span>   RButtonPressed  <span class="cm">// right button held</span>
+<span class="kw">public static bool</span>   MButtonPressed  <span class="cm">// middle button held</span>
+<span class="kw">public static</span> <span class="ty">Point</span>  LClickPosition  <span class="cm">// where left was pressed (for drag detection)</span>
+<span class="kw">public const  int</span>    MOUSE_DELAY_DOUBLE_CLICK = <span class="nm">350</span>  <span class="cm">// ms window for double click</span></code></pre>
+
+<h3>Keyboard</h3>
+<p>
+  <code>Keyboard</code> (<span class="file">Input/Keyboard.cs</span>) normalises key combinations
+  into canonical strings like <code>"CTRL+SHIFT+SDLK_A"</code> for macro and hotkey comparison:
+</p>
+
+<pre><code><span class="kw">public static bool</span>   Alt   <span class="cm">// modifier state, updated per event</span>
+<span class="kw">public static bool</span>   Shift
+<span class="kw">public static bool</span>   Ctrl
+
+<span class="cm">// event fired for every key-down (includes modifier state in the string)</span>
+<span class="kw">public static event</span> Action&lt;<span class="kw">string</span>&gt; KeyDownEvent;
+
+<span class="cm">// normalise "ctrl+a" → "CTRL+SDLK_A" for consistent hotkey comparison</span>
+<span class="kw">public static string</span> <span class="fn">NormalizeKeyString</span>(<span class="kw">string</span> input) { ... }</code></pre>
+
+<h3>Input Priority Chain</h3>
+<p>
+  The UIManager processes input in Z-order from top to bottom of the gump stack. An ImGui
+  window sitting on top of the UO gumps has the highest priority; a focused <code>TextBox</code>
+  control will consume all keyboard input before it reaches <code>MacroManager</code>. This
+  means you must never assume input events reach macro handlers while text input is focused.
+</p>
+
+<!-- ─────────────────────── GOING FORWARD ─────────────────────── -->
+<h2 id="going-forward">Going Forward</h2>
+
+<h3>Safe Patterns</h3>
+
+<table>
+  <thead>
+    <tr><th>Pattern</th><th>Guidance</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Accessing world objects</td>
+      <td>Always via <code>Client.Game.UO.World</code>. Never cache a <code>World</code> reference
+          in a field across scenes — the World is recreated on login.</td>
+    </tr>
+    <tr>
+      <td>Timing / throttling</td>
+      <td>Use <code>Time.Ticks + N</code> as a deadline and <code>Time.Ticks &gt; deadline</code>
+          to check. Avoid <code>DateTime.Now</code> for in-game timing.</td>
+    </tr>
+    <tr>
+      <td>Adding profile options</td>
+      <td>Add a public property to <code>Profile</code> with a default value. If the type is
+          complex (not a primitive or <code>Point</code>), add it to the JSON context.</td>
+    </tr>
+    <tr>
+      <td>Scene transitions</td>
+      <td>Call <code>Client.Game.SetScene(new YourScene())</code> from the game thread.
+          Never call from the network thread.</td>
+    </tr>
+    <tr>
+      <td>Input handling</td>
+      <td>Subscribe to <code>Keyboard.KeyDownEvent</code> or handle in a gump's
+          <code>OnKeyboardDown()</code> override, not by polling SDL directly.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Anti-Patterns to Avoid</h3>
+
+<ul>
+  <li>
+    <strong>Static fields that hold World objects:</strong> If the player logs out and back in,
+    the World is a new instance. Static caches will hold stale (possibly destroyed) objects.
+  </li>
+  <li>
+    <strong>Storing raw <code>Thread.Sleep</code> in game code:</strong> All updates happen on
+    the main thread via the FNA game loop. Sleeping blocks the entire client.
+  </li>
+  <li>
+    <strong>Calling <code>Profile.Save()</code> every frame:</strong> JSON serialisation is
+    expensive. Save only on meaningful user actions or at exit.
+  </li>
+  <li>
+    <strong>Bypassing <code>SetScene()</code>:</strong> Assigning to <code>Client.Game.Scene</code>
+    directly skips the <code>Dispose()</code> / <code>Load()</code> lifecycle and will leak
+    resources.
+  </li>
+</ul>
+
+<div class="doc-nav">
+  <a href="index.html">← Back to Index</a>
+  <a href="02-gameobjects.html">02 Game Objects &amp; World State →</a>
+</div>
+
+</main>
+</div>
+</body>
+</html>

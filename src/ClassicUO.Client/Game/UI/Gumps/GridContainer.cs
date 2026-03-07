@@ -1935,6 +1935,9 @@ namespace ClassicUO.Game.UI.Gumps
                     // Without this, locked items get repositioned because they're not found in the first pass
                     AddItemSlot(itemSerial, slot);
                 }
+
+                // Persist immediately so crashes don't lose the locked state
+                GridContainerSaveData.Instance.Save();
             }
 
             /// <summary>

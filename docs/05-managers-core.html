@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TazUO — 05: Core Managers</title>
+  <style>
+    :root {
+      --bg:#0f1117;--surface:#181c27;--card:#1e2233;--border:#2a3050;
+      --accent:#4f8ef7;--accent2:#7c5cfc;--good:#3ecf8e;--warn:#f5a623;
+      --bad:#e05252;--text:#cdd6f4;--muted:#7480a0;--code-bg:#12151f;
+      --code-key:#cba6f7;--code-str:#a6e3a1;--code-num:#fab387;
+      --code-cmt:#585b75;--code-typ:#89dceb;--code-fn:#89b4fa;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.65}
+    a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+    .page{display:flex;min-height:100vh}
+    nav{width:270px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:28px 0;position:sticky;top:0;height:100vh;overflow-y:auto}
+    main{flex:1;padding:48px 56px;max-width:1000px}
+    @media(max-width:860px){.page{flex-direction:column}nav{width:100%;height:auto;position:static}main{padding:28px 20px}}
+    .nav-logo{font-size:1.1rem;font-weight:700;color:var(--accent);padding:0 24px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+    .nav-logo .badge{font-size:0.65rem;background:var(--accent2);color:#fff;padding:2px 7px;border-radius:99px;font-weight:600;letter-spacing:.04em}
+    .nav-section{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding:20px 24px 6px}
+    nav ul{list-style:none}
+    nav ul li a{display:block;padding:6px 24px;font-size:0.9rem;color:var(--muted);border-left:3px solid transparent;transition:all .15s}
+    nav ul li a:hover,nav ul li a.active{color:var(--text);border-left-color:var(--accent);background:rgba(79,142,247,.06);text-decoration:none}
+    h1{font-size:2.2rem;font-weight:800;line-height:1.2;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px}
+    .subtitle{color:var(--muted);font-size:1.05rem;margin-bottom:36px}
+    h2{font-size:1.55rem;font-weight:700;color:#e0e6ff;margin:56px 0 14px;padding-top:12px;border-top:1px solid var(--border)}
+    h2:first-of-type{border-top:none;margin-top:0}
+    h3{font-size:1.15rem;font-weight:700;color:var(--accent);margin:32px 0 10px}
+    h4{font-size:0.95rem;font-weight:700;color:var(--code-typ);margin:20px 0 8px;text-transform:uppercase;letter-spacing:.06em}
+    p{margin-bottom:14px}ul,ol{padding-left:22px;margin-bottom:14px}li{margin-bottom:4px}
+    strong{color:#e0e6ff}
+    .callout{border-left:4px solid;border-radius:0 8px 8px 0;padding:14px 18px;margin:18px 0;font-size:0.94rem}
+    .callout.info{border-color:var(--accent);background:rgba(79,142,247,.08)}
+    .callout.good{border-color:var(--good);background:rgba(62,207,142,.08)}
+    .callout.warn{border-color:var(--warn);background:rgba(245,166,35,.08)}
+    .callout.danger{border-color:var(--bad);background:rgba(224,82,82,.08)}
+    .callout .label{font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+    .callout.info .label{color:var(--accent)}.callout.good .label{color:var(--good)}
+    .callout.warn .label{color:var(--warn)}.callout.danger .label{color:var(--bad)}
+    pre{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:20px;overflow-x:auto;margin:14px 0 20px;font-size:0.87rem;line-height:1.6}
+    code{font-family:'Cascadia Code','Fira Code','Consolas',monospace}
+    p code,li code{background:var(--code-bg);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:0.86em;color:var(--code-typ)}
+    .kw{color:var(--code-key)}.ty{color:var(--code-typ)}.fn{color:var(--code-fn)}
+    .st{color:var(--code-str)}.nm{color:var(--code-num)}.cm{color:var(--code-cmt);font-style:italic}
+    .flow{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:24px 28px;margin:14px 0 20px;font-family:monospace;font-size:0.88rem;line-height:1.9;white-space:pre;overflow-x:auto}
+    table{width:100%;border-collapse:collapse;margin:14px 0 20px;font-size:0.9rem}
+    th{background:var(--card);color:var(--accent);font-size:0.78rem;text-transform:uppercase;letter-spacing:.07em;padding:10px 14px;text-align:left;border-bottom:2px solid var(--border)}
+    td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+    tr:last-child td{border-bottom:none}tr:hover td{background:rgba(255,255,255,.02)}td code{font-size:0.83rem}
+    .file{display:inline-block;background:#1a1f35;border:1px solid var(--border);border-radius:6px;padding:2px 10px;font-family:monospace;font-size:0.8rem;color:var(--code-fn);margin:2px 2px}
+    .doc-nav{display:flex;justify-content:space-between;align-items:center;margin-top:60px;padding-top:24px;border-top:1px solid var(--border);font-size:0.9rem}
+    .doc-nav a{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 18px;font-weight:600;transition:border-color .15s}
+    .doc-nav a:hover{border-color:var(--accent);text-decoration:none}
+    hr{border:none;border-top:1px solid var(--border);margin:40px 0}
+  </style>
+</head>
+<body>
+<div class="page">
+<nav>
+  <div class="nav-logo">TazUO Docs <span class="badge">05</span></div>
+  <div class="nav-section">This Document</div>
+  <ul>
+    <li><a href="#pattern">Manager pattern</a></li>
+    <li><a href="#target">TargetManager</a></li>
+    <li><a href="#pathfinder">Pathfinder</a></li>
+    <li><a href="#walker">WalkerManager</a></li>
+    <li><a href="#macro">MacroManager</a></li>
+    <li><a href="#journal">JournalManager</a></li>
+    <li><a href="#party">PartyManager</a></li>
+    <li><a href="#corpse">CorpseManager</a></li>
+    <li><a href="#other">Other managers</a></li>
+    <li><a href="#going-forward">Going forward</a></li>
+  </ul>
+  <div class="nav-section">All Documents</div>
+  <ul>
+    <li><a href="index.html">Index</a></li>
+    <li><a href="01-architecture.html">01 Architecture</a></li>
+    <li><a href="02-gameobjects.html">02 Game Objects</a></li>
+    <li><a href="03-network.html">03 Network</a></li>
+    <li><a href="04-rendering.html">04 Rendering</a></li>
+    <li><a href="05-managers-core.html" class="active">05 Core Managers</a></li>
+    <li><a href="06-managers-tazuo.html">06 TazUO Managers</a></li>
+    <li><a href="07-ui-controls.html">07 UI Controls</a></li>
+    <li><a href="08-ui-gumps.html">08 UI Gumps</a></li>
+    <li><a href="09-scripting.html">09 Scripting</a></li>
+  </ul>
+</nav>
+
+<main>
+<h1>Core Managers</h1>
+<p class="subtitle">
+  The gameplay managers that implement targeting, pathfinding, movement prediction,
+  macro execution, the journal, parties, and corpses — all owned by the <code>World</code>
+  instance and updated each frame by <code>GameScene</code>.
+</p>
+
+<!-- ─────────────────────── MANAGER PATTERN ─────────────────────── -->
+<h2 id="pattern">The Manager Pattern</h2>
+
+<p>
+  TazUO uses <strong>constructor-injected managers</strong> rather than singletons (with a
+  few exceptions). Every manager is instantiated in <code>World()</code>'s constructor,
+  receives the <code>World</code> reference, and is exposed as a property:
+</p>
+
+<pre><code><span class="cm">// World constructor creates all managers</span>
+<span class="kw">public</span> <span class="ty">World</span>()
+{
+    CorpseManager  = <span class="kw">new</span> <span class="ty">CorpseManager</span>(<span class="kw">this</span>);
+    Party          = <span class="kw">new</span> <span class="ty">PartyManager</span>(<span class="kw">this</span>);
+    TargetManager  = <span class="kw">new</span> <span class="ty">TargetManager</span>(<span class="kw">this</span>);
+    Macros         = <span class="kw">new</span> <span class="ty">MacroManager</span>(<span class="kw">this</span>);
+    Journal        = <span class="kw">new</span> <span class="ty">JournalManager</span>();
+    <span class="cm">// ...15+ more managers</span>
+}</code></pre>
+
+<p>
+  Most managers expose an <code>Update(uint ticks)</code> or <code>Update(double totalTime, double frameTime)</code>
+  method that is called from <code>GameScene.Update()</code>. They react to incoming network
+  data (set by packet handlers) and drive outgoing actions (sending packets or mutating world state).
+</p>
+
+<table>
+  <thead><tr><th>Manager</th><th>Property on World</th><th>Key responsibility</th></tr></thead>
+  <tbody>
+    <tr><td><code>TargetManager</code></td><td><code>World.TargetManager</code></td><td>Cursor targeting, target queue, last/new target</td></tr>
+    <tr><td><code>MacroManager</code></td><td><code>World.Macros</code></td><td>Macro recording, playback, hotkey binding</td></tr>
+    <tr><td><code>JournalManager</code></td><td><code>World.Journal</code></td><td>Chat/message log with disk persistence</td></tr>
+    <tr><td><code>PartyManager</code></td><td><code>World.Party</code></td><td>Party membership, HP bars, loot permission</td></tr>
+    <tr><td><code>CorpseManager</code></td><td><code>World.CorpseManager</code></td><td>Maps corpse items to their source Mobile</td></tr>
+    <tr><td><code>OPL</code></td><td><code>World.OPL</code></td><td>Item property (tooltip) cache</td></tr>
+    <tr><td><code>HouseManager</code></td><td><code>World.HouseManager</code></td><td>House customization data</td></tr>
+    <tr><td><code>AuraManager</code></td><td><code>World.AuraManager</code></td><td>Aura rendering around selected targets</td></tr>
+    <tr><td><code>Weather</code></td><td><code>World.Weather</code></td><td>Rain/snow/storm effects</td></tr>
+    <tr><td><code>InfoBars</code></td><td><code>World.InfoBars</code></td><td>Info bar display</td></tr>
+  </tbody>
+</table>
+
+<!-- ─────────────────────── TARGETMANAGER ─────────────────────── -->
+<h2 id="target">TargetManager</h2>
+
+<p>
+  <span class="file">Game/Managers/TargetManager.cs</span> — manages the cursor targeting
+  system. When the server requests a target (0x6C), or a macro/script initiates targeting,
+  <code>TargetManager</code> tracks what kind of target is expected and routes the user's
+  click to the right network packet.
+</p>
+
+<table>
+  <thead><tr><th>Enum / Property</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>CursorTarget.Object</code></td><td>Standard single-click target on an entity</td></tr>
+    <tr><td><code>CursorTarget.Position</code></td><td>Target a tile position (used for spells like Teleport)</td></tr>
+    <tr><td><code>CursorTarget.MultiPlacement</code></td><td>Placing a house or ship deeded structure</td></tr>
+    <tr><td><code>CursorTarget.CallbackTarget</code></td><td>Client-side target that fires a C# delegate instead of a packet</td></tr>
+    <tr><td><code>TargetType.Neutral / Harmful / Beneficial</code></td><td>Cursor colour hint (blue/red/green crosshair)</td></tr>
+  </tbody>
+</table>
+
+<pre><code><span class="cm">// Key public API</span>
+<span class="kw">public bool</span>   IsTargeting   { <span class="kw">get</span>; }      <span class="cm">// cursor is in target mode</span>
+<span class="kw">public</span> <span class="ty">CursorTarget</span> TargetingType { <span class="kw">get</span>; }
+<span class="kw">public uint</span>   LastTargetInfo { <span class="kw">get</span>; <span class="kw">set</span>; }  <span class="cm">// serial of last selected target</span>
+<span class="kw">public uint</span>   NewTargetSystem { <span class="kw">get</span>; <span class="kw">set</span>; } <span class="cm">// TazUO: persisted "attack this" serial</span>
+
+<span class="kw">public void</span> <span class="fn">SetTargeting</span>(<span class="ty">CursorTarget</span> type, <span class="ty">TargetType</span> targetType, <span class="kw">uint</span> cursorID) { ... }
+<span class="kw">public void</span> <span class="fn">Target</span>(<span class="kw">uint</span> serial) { ... }    <span class="cm">// select object target, sends 0x6C response</span>
+<span class="kw">public void</span> <span class="fn">Target</span>(<span class="kw">ushort</span> x, <span class="kw">ushort</span> y, <span class="kw">sbyte</span> z, <span class="kw">ushort</span> graphic) { ... } <span class="cm">// position target</span>
+<span class="kw">public void</span> <span class="fn">CancelTarget</span>() { ... }         <span class="cm">// sends cancel 0x6C to server</span></code></pre>
+
+<div class="callout info">
+  <div class="label">Last Target vs New Target System</div>
+  Classic UO has "last target" (repeatable via macro). TazUO adds a <strong>new target system</strong>
+  (<code>NewTargetSystem</code>) — a separate persistent target serial that HealthLinesManager
+  uses to draw a special indicator on the selected target. It survives longer than the temporary
+  last-target and is used by combat-assist features.
+</div>
+
+<!-- ─────────────────────── PATHFINDER ─────────────────────── -->
+<h2 id="pathfinder">Pathfinder — A* Auto-Walk</h2>
+
+<p>
+  <span class="file">Game/Pathfinder.cs</span> — implements A* pathfinding over the UO world
+  tile grid. It is owned by <code>PlayerMobile</code> (accessible via <code>World.Player.Pathfinder</code>),
+  not by <code>World</code> directly.
+</p>
+
+<pre><code><span class="kw">public sealed class</span> <span class="ty">Pathfinder</span>
+{
+    <span class="kw">private const int</span> PATHFINDER_MAX_NODES = <span class="nm">150000</span>; <span class="cm">// A* node budget</span>
+    <span class="kw">private static</span> <span class="ty">PriorityQueue</span> _openSet;
+    <span class="kw">private static</span> Dictionary&lt;(<span class="kw">int</span>,<span class="kw">int</span>,<span class="kw">int</span>), <span class="ty">PathNode</span>&gt; _closedSet;
+    <span class="kw">private static</span> List&lt;<span class="ty">PathNode</span>&gt; _path;      <span class="cm">// the computed path</span>
+
+    <span class="kw">public bool</span>  AutoWalking        { <span class="kw">get</span>; <span class="kw">set</span>; }   <span class="cm">// true while walking along path</span>
+    <span class="kw">public bool</span>  BlockMoving        { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public</span> <span class="ty">Point</span> StartPoint         { <span class="kw">get</span>; }
+    <span class="kw">public</span> <span class="ty">Point</span> EndPoint           { <span class="kw">get</span>; }
+    <span class="kw">public int</span>   PathSize           => _path.Count;
+
+    <span class="kw">public static bool</span> PathFindingCanBeCancelled { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public static bool</span> FastRotation             { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public bool</span>        UseLongDistancePathfinding { <span class="kw">get</span>; <span class="kw">set</span>; }
+}</code></pre>
+
+<p>
+  The 8-directional movement offsets (<code>_offsetX / _offsetY</code>) support diagonal
+  movement. The node budget of 150,000 prevents runaway pathfinding on impossible routes.
+  Pathfinding results are consumed by <code>WalkerManager</code> which translates path steps
+  into actual walk requests sent to the server.
+</p>
+
+<!-- ─────────────────────── WALKER ─────────────────────── -->
+<h2 id="walker">WalkerManager — Movement Prediction</h2>
+
+<p>
+  <span class="file">Game/Managers/WalkerManager.cs</span> — handles client-side movement
+  prediction for the local player. UO clients send walk requests (<code>0x02/0x97</code>) to
+  the server with a sequence number, then immediately move the player locally. The server
+  sends <code>0x22 ConfirmWalk</code> or <code>0x21 DenyWalk</code> to accept/reject each step.
+</p>
+
+<table>
+  <thead><tr><th>Struct/Type</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>StepInfo</code></td><td>One pending step: Direction, Sequence number, Accepted flag, X/Y/Z destination</td></tr>
+    <tr><td><code>FastWalkStack</code></td><td>Anti-cheat validation keys from server; must be included in walk packets</td></tr>
+  </tbody>
+</table>
+
+<p>
+  The prediction stack holds at most <code>Constants.MAX_STEP_COUNT</code> pending steps. If
+  the server denies a step, the walker snaps the player back to the server-confirmed position
+  and flushes all pending steps. This is the "rubber-band" effect seen when walking into walls.
+</p>
+
+<!-- ─────────────────────── MACROMANAGER ─────────────────────── -->
+<h2 id="macro">MacroManager</h2>
+
+<p>
+  <span class="file">Game/Managers/MacroManager.cs</span> — records and plays back macros.
+  A macro is a linked list of <code>MacroObject</code> nodes, each describing one action
+  (cast spell, use skill, use item, say text, etc.).
+</p>
+
+<pre><code><span class="kw">public sealed class</span> <span class="ty">MacroManager</span> : <span class="ty">LinkedObject</span>
+{
+    <span class="cm">// Macro execution state</span>
+    <span class="kw">private</span> <span class="ty">MacroObject</span> _lastMacro;   <span class="cm">// currently executing node</span>
+    <span class="kw">private long</span> _nextTimer;           <span class="cm">// Time.Ticks when to advance</span>
+
+    <span class="cm">// Skill index table — maps macro skill slot → UO skill index</span>
+    <span class="kw">private readonly byte</span>[] _skillTable = { <span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">35</span>, <span class="nm">4</span>, ... };
+
+    <span class="cm">// Spellbook sizes for each magic school</span>
+    <span class="kw">private readonly int</span>[] _spellsCountTable = { <span class="nm">64</span>, <span class="nm">17</span>, ... };
+
+    <span class="kw">public long</span> WaitForTargetTimer { <span class="kw">get</span>; <span class="kw">set</span>; }  <span class="cm">// used by "WaitForTarget" macro action</span>
+    <span class="kw">public bool</span> WaitingBandageTarget { <span class="kw">get</span>; <span class="kw">set</span>; }
+}</code></pre>
+
+<h3>Macro Storage</h3>
+<p>
+  Macros are stored as XML files in <code>Data/Macros/</code>. Each <code>Macro</code> has:
+</p>
+<ul>
+  <li>A name and key binding (SDL keycode + modifier flags)</li>
+  <li>A linked list of <code>MacroObject</code> nodes</li>
+  <li>Each node has a <code>MacroType</code> enum value and optional subcode / text</li>
+</ul>
+
+<h3>Macro Execution</h3>
+<p>
+  <code>MacroManager.Update()</code> is called each frame. If a macro is running, it
+  evaluates the current <code>MacroObject</code> against <code>Time.Ticks</code>. Actions
+  that require server confirmation (e.g. "Use Skill") set <code>WaitForTargetTimer</code>
+  to pause execution until the server responds. The integration with LegionScripting means
+  Python scripts can also trigger macros by name.
+</p>
+
+<!-- ─────────────────────── JOURNALMANAGER ─────────────────────── -->
+<h2 id="journal">JournalManager</h2>
+
+<p>
+  <span class="file">Game/Managers/JournalManager.cs</span> — the chat and message log.
+  All in-game text messages (NPC speech, player chat, system messages, combat text) flow
+  through <code>Journal.Add()</code>.
+</p>
+
+<pre><code><span class="cm">// Journal is a bounded deque — oldest entries are discarded</span>
+<span class="kw">public static</span> Deque&lt;<span class="ty">JournalEntry</span>&gt; Entries { <span class="kw">get</span>; }
+    = <span class="kw">new</span>(Constants.MAX_JOURNAL_HISTORY_COUNT);
+
+<span class="kw">public void</span> <span class="fn">Add</span>(<span class="kw">string</span> text, <span class="kw">ushort</span> hue, <span class="kw">string</span> name,
+               <span class="ty">TextType</span> type, <span class="kw">bool</span> isunicode, <span class="ty">MessageType</span> messageType)
+{
+    <span class="kw">if</span> (<span class="ty">JournalFilterManager</span>.Instance.<span class="fn">IgnoreMessage</span>(text)) <span class="kw">return</span>;
+
+    <span class="cm">// Recycle oldest entry if at capacity</span>
+    <span class="ty">JournalEntry</span> entry = Entries.Count >= MAX_JOURNAL_HISTORY_COUNT
+        ? Entries.<span class="fn">RemoveFromFront</span>()
+        : <span class="kw">new</span> <span class="ty">JournalEntry</span>();
+
+    <span class="cm">// Fill entry fields (text, hue, name, font, time, type)</span>
+    Entries.<span class="fn">AddToBack</span>(entry);
+    <span class="ty">EventSink</span>.<span class="fn">InvokeJournalEntryAdded</span>(<span class="kw">null</span>, entry);
+
+    <span class="cm">// Optionally write to disk (_fileWriter, lazy-initialized)</span>
+}</code></pre>
+
+<h3>Journal Entry Fields</h3>
+<table>
+  <thead><tr><th>Field</th><th>Type</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>Text</code></td><td><code>string</code></td><td>Message content</td></tr>
+    <tr><td><code>Name</code></td><td><code>string</code></td><td>Speaker / source name</td></tr>
+    <tr><td><code>Hue</code></td><td><code>ushort</code></td><td>Colour (set per message type and profile settings)</td></tr>
+    <tr><td><code>TextType</code></td><td><code>TextType</code></td><td>Regular / System / Emote / Alliance / Guild / Party etc.</td></tr>
+    <tr><td><code>MessageType</code></td><td><code>MessageType</code></td><td>Regular / Whisper / Yell / Emote / Command</td></tr>
+    <tr><td><code>Time</code></td><td><code>DateTime</code></td><td>Wall-clock time of receipt (for disk log)</td></tr>
+    <tr><td><code>Font</code></td><td><code>byte</code></td><td>UO font index (0 = unicode, 9 = ASCII)</td></tr>
+  </tbody>
+</table>
+
+<p>
+  Scripts (LegionScripting) subscribe to journal events via <code>EventSink.JournalEntryAdded</code>
+  to implement pattern-matching bots. The <code>JournalFilterManager</code> allows the user to
+  suppress specific messages by regex pattern.
+</p>
+
+<!-- ─────────────────────── PARTYMANAGER ─────────────────────── -->
+<h2 id="party">PartyManager</h2>
+
+<p>
+  <span class="file">Game/Managers/PartyManager.cs</span> — tracks party membership and
+  provides data for party HP bars.
+</p>
+
+<pre><code><span class="kw">public sealed class</span> <span class="ty">PartyManager</span>
+{
+    <span class="kw">public bool</span>  InParty  => Leader != <span class="nm">0</span>;
+    <span class="kw">public uint</span>  Leader   { <span class="kw">get</span>; <span class="kw">set</span>; }   <span class="cm">// serial of party leader</span>
+    <span class="kw">public uint</span>  Inviter  { <span class="kw">get</span>; <span class="kw">set</span>; }   <span class="cm">// serial of pending invite sender</span>
+    <span class="kw">public bool</span>  CanLoot  { <span class="kw">get</span>; <span class="kw">set</span>; }   <span class="cm">// can loot party members' corpses</span>
+
+    <span class="kw">public</span> <span class="ty">PartyMember</span>[] Members { <span class="kw">get</span>; } = <span class="kw">new</span> <span class="ty">PartyMember</span>[<span class="nm">10</span>]; <span class="cm">// max 10</span>
+
+    <span class="cm">// Auto-heal support for macro "heal party member"</span>
+    <span class="kw">public long</span> PartyHealTimer  { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public uint</span> PartyHealTarget { <span class="kw">get</span>; <span class="kw">set</span>; }
+}</code></pre>
+
+<p>
+  <code>ParsePacket()</code> handles the 0xBF extended party packets. Party updates create
+  or destroy <code>BaseHealthBarGump</code> instances for each member, giving the classic
+  party HP bar display. <code>InParty</code> is used by combat macros to determine valid
+  heal targets.
+</p>
+
+<!-- ─────────────────────── CORPSEMANAGER ─────────────────────── -->
+<h2 id="corpse">CorpseManager</h2>
+
+<p>
+  <span class="file">Game/Managers/CorpseManager.cs</span> — maps corpse <code>Item</code>
+  serials back to the <code>Mobile</code> that died. This is needed for equipment display
+  (corpses can be searched) and for auto-loot (need to know whose corpse it is).
+</p>
+
+<pre><code><span class="kw">public sealed class</span> <span class="ty">CorpseManager</span>
+{
+    <span class="kw">private readonly</span> Deque&lt;<span class="ty">CorpseInfo</span>&gt; _corpses;
+
+    <span class="kw">public void</span> <span class="fn">Add</span>(<span class="kw">uint</span> corpse, <span class="kw">uint</span> obj, <span class="ty">Direction</span> dir, <span class="kw">bool</span> run) { ... }
+    <span class="kw">public void</span> <span class="fn">Remove</span>(<span class="kw">uint</span> corpse, <span class="kw">uint</span> obj) { ... }
+    <span class="kw">public</span> <span class="ty">CorpseInfo</span> <span class="fn">GetCorpseObject</span>(<span class="kw">uint</span> serial) { ... }
+}
+
+<span class="kw">public struct</span> <span class="ty">CorpseInfo</span>
+{
+    <span class="kw">public uint</span>      CorpseSerial;  <span class="cm">// the Item serial of the corpse</span>
+    <span class="kw">public uint</span>      ObjectSerial;  <span class="cm">// the Mobile that died</span>
+    <span class="kw">public</span> <span class="ty">Direction</span> Direction;     <span class="cm">// direction at death (for equipment display)</span>
+    <span class="kw">public bool</span>      IsRunning;     <span class="cm">// was the mobile running when it died?</span>
+}</code></pre>
+
+<p>
+  When a mobile dies (0x2C DeathScreen), <code>CorpseManager.Add()</code> is called pairing
+  the new corpse item with the mobile's serial. When the corpse decays (0x1D Delete),
+  <code>CorpseManager.Remove()</code> cleans up the entry. <code>GetCorpseObject()</code>
+  is the lookup path used by AutoLootManager to find whose corpse to open.
+</p>
+
+<!-- ─────────────────────── OTHER MANAGERS ─────────────────────── -->
+<h2 id="other">Other Notable Managers</h2>
+
+<table>
+  <thead><tr><th>Manager</th><th>File</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>SkillsGroupManager</code></td>
+      <td><span class="file">SkillsGroupManager.cs</span></td>
+      <td>Organises skills into collapsible groups in the Skills gump. Groups are saved per-profile.</td>
+    </tr>
+    <tr>
+      <td><code>ObjectPropertiesListManager</code> (OPL)</td>
+      <td><span class="file">ObjectPropertiesListManager.cs</span></td>
+      <td>Cache for item property tooltips (0xD6 Mega Cliloc packets). Keyed by serial; retrieved on hover.</td>
+    </tr>
+    <tr>
+      <td><code>ContainerManager</code></td>
+      <td><span class="file">ContainerManager.cs</span></td>
+      <td>Tracks open container gumps, manages stacked container positions.</td>
+    </tr>
+    <tr>
+      <td><code>DelayedObjectClickManager</code></td>
+      <td><span class="file">DelayedObjectClickManager.cs</span></td>
+      <td>Defers single-click object requests to distinguish from double-clicks.</td>
+    </tr>
+    <tr>
+      <td><code>HouseManager</code></td>
+      <td><span class="file">HouseManager.cs</span></td>
+      <td>Tracks house components for the house customization editor.</td>
+    </tr>
+    <tr>
+      <td><code>BoatMovingManager</code></td>
+      <td><span class="file">BoatMovingManager.cs</span></td>
+      <td>Handles boat movement — moves all items/mobiles on the boat together.</td>
+    </tr>
+    <tr>
+      <td><code>MessageManager</code></td>
+      <td><span class="file">MessageManager.cs</span></td>
+      <td>Distributes incoming messages (Talk, UnicodeTalk) to journal, overhead text, and speech bubbles.</td>
+    </tr>
+    <tr>
+      <td><code>WorldTextManager</code></td>
+      <td><span class="file">WorldTextManager.cs</span></td>
+      <td>Manages overhead text objects (speech, damage numbers) attached to world objects.</td>
+    </tr>
+    <tr>
+      <td><code>ChatManager</code></td>
+      <td><span class="file">ChatManager.cs</span></td>
+      <td>UO chat system channels — separate from regular speech.</td>
+    </tr>
+    <tr>
+      <td><code>AuraManager</code></td>
+      <td><span class="file">AuraManager.cs</span></td>
+      <td>Draws circular aura effects around selected targets and party members.</td>
+    </tr>
+    <tr>
+      <td><code>IgnoreManager</code></td>
+      <td><span class="file">IgnoreManager.cs</span></td>
+      <td>List of ignored mobile serials; suppresses their messages from journal and overhead text.</td>
+    </tr>
+    <tr>
+      <td><code>GuildManager</code></td>
+      <td>(handled via World/network)</td>
+      <td>Guild membership is tracked via notoriety flags on mobiles; no separate manager class.</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ─────────────────────── GOING FORWARD ─────────────────────── -->
+<h2 id="going-forward">Going Forward</h2>
+
+<h3>Adding a New Manager</h3>
+<ol>
+  <li>Create <span class="file">Game/Managers/MyManager.cs</span>. Accept <code>World world</code> in the constructor and store it.</li>
+  <li>Add a property <code>public MyManager MyManager { get; }</code> to <code>World.cs</code>.</li>
+  <li>Instantiate in <code>World()</code>'s constructor: <code>MyManager = new MyManager(this);</code></li>
+  <li>Call <code>world.MyManager.Update(ticks)</code> from <code>GameScene.Update()</code> if the manager needs per-frame processing.</li>
+  <li>Subscribe to <code>EventSink</code> events if the manager needs to react to specific game events (player created, entity destroyed, etc.).</li>
+</ol>
+
+<h3>EventSink — The Event Bus</h3>
+<p>
+  <code>EventSink</code> is a static class with <code>event Action&lt;T&gt;</code> fields for
+  cross-cutting concerns:
+</p>
+<ul>
+  <li><code>EventSink.OnPlayerCreated</code> — fired when <code>World.Player</code> is set</li>
+  <li><code>EventSink.JournalEntryAdded</code> — fired on every journal message (used by scripting)</li>
+  <li><code>EventSink.OnPlayerStatChange</code> — fired when player HP/Mana/Stamina changes</li>
+  <li><code>EventSink.SkillValueChangedEvent</code> — on skill gain/loss</li>
+</ul>
+
+<div class="callout warn">
+  <div class="label">Manager lifetime</div>
+  Managers are tied to the <code>World</code> instance. When the player logs out or the scene
+  changes, a new <code>World</code> is created and all managers are re-instantiated. Static
+  state in managers will persist across scene changes — be careful with static fields that
+  hold world-object references.
+</div>
+
+<div class="doc-nav">
+  <a href="04-rendering.html">← 04 Rendering</a>
+  <a href="06-managers-tazuo.html">06 TazUO Managers →</a>
+</div>
+</main>
+</div>
+</body>
+</html>

@@ -279,7 +279,9 @@ public class GridContainerSaveData
         if (_entries.TryGetValue(serial, out GridContainerEntry entry))
             return entry;
 
-        return new GridContainerEntry();
+        var newEntry = new GridContainerEntry() { Serial = serial };
+        _entries[serial] = newEntry;
+        return newEntry;
     }
 }
 

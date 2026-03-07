@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TazUO Docs — 07: UI System: Controls & Architecture</title>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --card: #1c2128;
+    --border: #30363d; --accent: #58a6ff; --accent2: #79c0ff;
+    --text: #e6edf3; --muted: #8b949e; --green: #3fb950;
+    --yellow: #d29922; --red: #f85149; --purple: #bc8cff;
+    --orange: #ffa657;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif;
+         font-size: 15px; line-height: 1.65; display: flex; min-height: 100vh; }
+  nav { width: 260px; min-width: 260px; background: var(--surface); border-right: 1px solid var(--border);
+        padding: 24px 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; flex-shrink: 0; }
+  nav h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+            color: var(--muted); padding: 0 20px 8px; }
+  nav a { display: block; padding: 6px 20px; color: var(--muted); text-decoration: none;
+          font-size: 13px; transition: color .15s, background .15s; border-left: 2px solid transparent; }
+  nav a:hover { color: var(--text); background: var(--card); }
+  nav a.active { color: var(--accent); border-left-color: var(--accent); background: var(--card); }
+  nav .nav-group { margin-bottom: 20px; }
+  main { flex: 1; padding: 48px 60px; max-width: 1100px; }
+  h1 { font-size: 2.2rem; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+  .subtitle { color: var(--muted); font-size: 1.05rem; margin-bottom: 40px; }
+  h2 { font-size: 1.45rem; font-weight: 600; color: var(--accent2); margin: 48px 0 16px;
+       padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.1rem; font-weight: 600; color: var(--orange); margin: 28px 0 12px; }
+  h4 { font-size: .95rem; font-weight: 600; color: var(--purple); margin: 20px 0 8px; }
+  p { margin-bottom: 14px; color: var(--text); }
+  ul, ol { margin: 0 0 14px 24px; }
+  li { margin-bottom: 5px; }
+  code { background: var(--card); border: 1px solid var(--border); border-radius: 4px;
+         padding: 1px 6px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: .87em; color: var(--orange); }
+  pre { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+        padding: 20px; overflow-x: auto; margin: 16px 0 24px; }
+  pre code { background: none; border: none; padding: 0; font-size: .88em; color: var(--text); }
+  .kw { color: #ff7b72; } .ty { color: #79c0ff; } .cm { color: #8b949e; font-style: italic; }
+  .st { color: #a5d6ff; } .nu { color: #79c0ff; } .fn { color: #d2a8ff; }
+  .prop { color: #ffa657; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0 28px; font-size: .9rem; }
+  th { background: var(--card); color: var(--accent2); font-weight: 600; text-align: left;
+       padding: 10px 14px; border: 1px solid var(--border); }
+  td { padding: 9px 14px; border: 1px solid var(--border); vertical-align: top; }
+  tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+  .callout { border-radius: 8px; padding: 16px 20px; margin: 20px 0; border-left: 4px solid; }
+  .callout.info { background: rgba(88,166,255,.08); border-color: var(--accent); }
+  .callout.good { background: rgba(63,185,80,.08); border-color: var(--green); }
+  .callout.warn { background: rgba(210,153,34,.1); border-color: var(--yellow); }
+  .callout.danger { background: rgba(248,81,73,.08); border-color: var(--red); }
+  .callout strong { display: block; margin-bottom: 6px; font-size: .85rem; text-transform: uppercase;
+                    letter-spacing: .5px; }
+  .callout.info strong { color: var(--accent); }
+  .callout.good strong { color: var(--green); }
+  .callout.warn strong { color: var(--yellow); }
+  .callout.danger strong { color: var(--red); }
+  .flow { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+          padding: 20px 28px; margin: 16px 0 24px; font-family: monospace; font-size: .87em;
+          white-space: pre; line-height: 1.7; color: var(--text); overflow-x: auto; }
+  .nav-page-links { display: flex; justify-content: space-between; margin-top: 60px;
+                    padding-top: 24px; border-top: 1px solid var(--border); }
+  .nav-page-links a { color: var(--accent); text-decoration: none; font-size: .95rem; }
+  .nav-page-links a:hover { text-decoration: underline; }
+  .badge { display: inline-block; font-size: .72rem; padding: 1px 7px; border-radius: 10px;
+           background: rgba(188,140,255,.15); color: var(--purple); border: 1px solid var(--purple);
+           margin-left: 6px; vertical-align: middle; }
+  .badge.imgui { background: rgba(63,185,80,.12); color: var(--green); border-color: var(--green); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-group">
+    <h2>TazUO Docs</h2>
+    <a href="index.html">← Index</a>
+    <a href="01-architecture.html">01 · Architecture</a>
+    <a href="02-gameobjects.html">02 · Game Objects</a>
+    <a href="03-network.html">03 · Network</a>
+    <a href="04-rendering.html">04 · Rendering</a>
+    <a href="05-managers-core.html">05 · Core Managers</a>
+    <a href="06-managers-tazuo.html">06 · TazUO Managers</a>
+    <a href="07-ui-controls.html" class="active">07 · UI Controls</a>
+    <a href="08-ui-gumps.html">08 · UI Gumps</a>
+    <a href="09-scripting.html">09 · Scripting</a>
+  </div>
+  <div class="nav-group">
+    <h2>This Page</h2>
+    <a href="#overview">Overview</a>
+    <a href="#uimanager">UIManager</a>
+    <a href="#control">Control Base Class</a>
+    <a href="#gump">Gump Base Class</a>
+    <a href="#controls-catalog">Controls Catalog</a>
+    <a href="#button">Button</a>
+    <a href="#label">Label</a>
+    <a href="#textbox">Text Input</a>
+    <a href="#scrollarea">ScrollArea</a>
+    <a href="#gumppic">GumpPic</a>
+    <a href="#alphablend">AlphaBlendControl</a>
+    <a href="#imgui">ImGui System</a>
+    <a href="#events">Event System</a>
+    <a href="#new-gump">Adding a New Gump</a>
+    <a href="#forward">Going Forward</a>
+  </div>
+</nav>
+
+<main>
+  <h1>UI System: Controls &amp; Architecture</h1>
+  <p class="subtitle">Session 07 — The two-layer UI system: legacy UO controls + ImGui overlay</p>
+
+  <!-- ═══════════════════════════════════════════════════════ OVERVIEW -->
+  <h2 id="overview">Overview</h2>
+
+  <p>TazUO has <strong>two coexisting UI systems</strong>:</p>
+
+  <ol>
+    <li><strong>Legacy UO Control System</strong> — Every visible window ("gump") is a <code>Gump</code> subclass composed of <code>Control</code> leaf nodes. This is the system the Ultima Online server communicates with.</li>
+    <li><strong>ImGui Overlay</strong> — Modern developer-tools-style windows using <code>ImGuiNET</code>. Used for the script manager, performance tools, and developer debugging.</li>
+  </ol>
+
+  <p>Both systems run inside <code>GameScene</code> and render during the UI draw pass (after all game world rendering). <code>UIManager</code> (in <code>Game/Managers/</code>) is the static hub that manages the legacy system.</p>
+
+<div class="flow">GameScene.Draw()
+  ├── DrawWorld (4 render passes — see doc 04)
+  └── DrawUI
+       ├── UIManager.PreDraw()    — layout recalculation
+       ├── UIManager.Draw()       — draw all Gumps (front to back)
+       └── ImGui.Render()         — draw ImGui overlay on top</div>
+
+  <!-- ═══════════════════════════════════════════════════════ UIMANAGER -->
+  <h2 id="uimanager">UIManager</h2>
+
+  <p><code>UIManager</code> is a static class that owns the linked list of all active <code>Gump</code> instances. It handles hit-testing, drag &amp; drop, keyboard focus routing, modal state, and the type-indexed gump cache.</p>
+
+  <h3>Core State</h3>
+
+  <table>
+    <tr><th>Field / Property</th><th>Type</th><th>Purpose</th></tr>
+    <tr><td><code>Gumps</code></td><td><code>LinkedList&lt;Gump&gt;</code></td><td>All active gumps. First = front (drawn last = on top). Iterated back-to-front for draw, front-to-back for hit-testing.</td></tr>
+    <tr><td><code>_gumpTypeList</code></td><td><code>Dictionary&lt;Type, List&lt;Gump&gt;&gt;</code></td><td>Per-type index for O(1) <code>GetGump&lt;T&gt;</code> and <code>ForEach&lt;T&gt;</code></td></tr>
+    <tr><td><code>MouseOverControl</code></td><td><code>Control</code></td><td>The topmost control the mouse is currently over (updated by <code>HandleMouseInput</code>)</td></tr>
+    <tr><td><code>KeyboardFocusControl</code></td><td><code>Control</code></td><td>The control that receives key events. Setting this triggers <code>OnFocusLost</code> on the old and <code>OnFocusEnter</code> on the new.</td></tr>
+    <tr><td><code>DraggingControl</code></td><td><code>Control</code></td><td>The gump currently being dragged; <code>null</code> if nothing is being dragged</td></tr>
+    <tr><td><code>IsModalOpen</code></td><td><code>bool</code></td><td>True if any <code>IsModal</code> gump is open. When modal, <code>IsMouseOverWorld</code> = false.</td></tr>
+    <tr><td><code>IsMouseOverWorld</code></td><td><code>bool</code></td><td>True only when mouse is over the game viewport and no gump intercepts it. GameScene checks this before dispatching clicks to world objects.</td></tr>
+  </table>
+
+  <h3>Key Methods</h3>
+
+  <table>
+    <tr><th>Method</th><th>Signature</th><th>What it does</th></tr>
+    <tr><td><code>Add</code></td><td><code>Add(Gump, front=true)</code></td><td>Inserts gump into the linked list (first = front), registers in type index, requests sort.</td></tr>
+    <tr><td><code>GetGump&lt;T&gt;</code></td><td><code>GetGump&lt;T&gt;(uint? serial)</code></td><td>Returns first live instance of type T, optionally filtered by <code>LocalSerial</code>. O(1) via type list.</td></tr>
+    <tr><td><code>GetGump</code></td><td><code>GetGump(uint serial)</code></td><td>Returns gump by <code>LocalSerial</code> (linear scan).</td></tr>
+    <tr><td><code>ForEach&lt;T&gt;</code></td><td><code>ForEach&lt;T&gt;(Action&lt;T&gt;, uint?)</code></td><td>Iterates all live instances of type T via snapshot array. Prunes disposed instances.</td></tr>
+    <tr><td><code>Update</code></td><td><code>Update()</code></td><td>Calls <code>Update()</code> on every gump; removes disposed gumps from list and type index.</td></tr>
+    <tr><td><code>Draw</code></td><td><code>Draw(batcher)</code></td><td>Draws gumps back-to-front (Gumps.Last → First). Wraps in <code>batcher.Begin/End</code>.</td></tr>
+    <tr><td><code>SavePosition</code></td><td><code>SavePosition(uint, Point)</code></td><td>Caches a gump position in <code>_gumpPositionCache</code> keyed by server serial. Used to restore window positions across logins.</td></tr>
+  </table>
+
+  <h3>Z-Ordering and Sort</h3>
+
+  <p>Gumps are stored in a <code>LinkedList</code>. "In front" = at the head (index 0 = first). When clicked, a gump is promoted to the front via <code>MakeTopMostGump()</code>. The optional sort step (<code>SortControlsByInfo()</code>) runs when <code>_needSort</code> is set, ordering gumps by their <code>UILayer</code> enum value:</p>
+
+  <table>
+    <tr><th>UILayer</th><th>Value</th><th>Examples</th></tr>
+    <tr><td><code>Default</code></td><td>0</td><td>All normal gumps</td></tr>
+    <tr><td><code>Over</code></td><td>1</td><td>Tooltips, popups</td></tr>
+    <tr><td><code>GameCursor</code></td><td>2</td><td>Item-drag cursor overlay</td></tr>
+  </table>
+
+  <h3>Modal Gumps</h3>
+
+  <p>Any gump with <code>IsModal = true</code> prevents mouse clicks from reaching the world. If <code>ModalClickOutsideAreaClosesThisControl = true</code>, clicking outside the modal gump's bounds disposes it. Use sparingly — the player cannot interact with anything else while a modal is open.</p>
+
+  <h3>Drag Behavior</h3>
+
+  <p>Ctrl-held drag activates precision mode: movement is halved (<code>CTRL_DRAG_SPEED_MULTIPLIER = 0.5f</code>) and after 10 pixels of movement, the axis is locked to horizontal or vertical. This lets players precisely position gumps without accidentally moving in two dimensions.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ CONTROL BASE -->
+  <h2 id="control">Control — The Base Class</h2>
+
+  <p><code>Control</code> is the abstract base for every UI element. It owns position, size, children, input flags, and the draw lifecycle. All gumps, buttons, labels, and scroll areas are Controls.</p>
+
+  <h3>Coordinate System</h3>
+
+  <p>All positions are relative to the parent:</p>
+
+  <pre><code><span class="prop">ScreenCoordinateX</span> = ParentX + X    <span class="cm">// absolute screen X</span>
+<span class="prop">ScreenCoordinateY</span> = ParentY + Y    <span class="cm">// absolute screen Y</span>
+<span class="prop">ParentX</span> = Parent.X + Parent.ParentX  <span class="cm">// recursive sum up to root</span></code></pre>
+
+  <h3>Key Properties</h3>
+
+  <table>
+    <tr><th>Property</th><th>Type</th><th>Notes</th></tr>
+    <tr><td><code>X, Y, Width, Height</code></td><td><code>ref int</code></td><td>References into the internal <code>Rectangle _bounds</code> — no copy-on-access</td></tr>
+    <tr><td><code>Children</code></td><td><code>List&lt;Control&gt;</code></td><td>Child controls. Setting <code>Parent</code> automatically adds/removes from this list.</td></tr>
+    <tr><td><code>Parent</code> / <code>RootParent</code></td><td><code>Control</code></td><td>Parent in the hierarchy. <code>RootParent</code> walks up to the top-level gump.</td></tr>
+    <tr><td><code>IsDisposed</code></td><td><code>bool</code></td><td>Set by <code>Dispose()</code>. UIManager prunes disposed controls on the next update.</td></tr>
+    <tr><td><code>IsVisible</code> / <code>IsEnabled</code></td><td><code>bool</code></td><td>Invisible controls are not drawn; disabled controls don't receive input.</td></tr>
+    <tr><td><code>Alpha</code></td><td><code>float</code></td><td>0.0–1.0 transparency. Setting this triggers <code>AlphaChanged()</code> which subclasses override to recompute hue vectors.</td></tr>
+    <tr><td><code>AcceptMouseInput</code></td><td><code>bool</code></td><td>If false, mouse passes through. Gated by <code>IsEnabled &amp;&amp; !IsDisposed &amp;&amp; IsVisible</code>.</td></tr>
+    <tr><td><code>AcceptKeyboardInput</code></td><td><code>bool</code></td><td>If true, clicking this control steals keyboard focus.</td></tr>
+    <tr><td><code>CanMove</code></td><td><code>bool</code></td><td>If true, dragging this control moves its parent gump.</td></tr>
+    <tr><td><code>IsModal</code></td><td><code>bool</code></td><td>Blocks all input to controls behind this one.</td></tr>
+    <tr><td><code>Page</code></td><td><code>int</code></td><td>Controls are only visible when parent's <code>ActivePage == 0 || ActivePage == Page</code>. Used by multi-page server gumps.</td></tr>
+    <tr><td><code>Tag</code></td><td><code>object</code></td><td>Arbitrary user data. Commonly used to attach IDs or payloads to controls.</td></tr>
+    <tr><td><code>Priority</code></td><td><code>ClickPriority</code></td><td>Click precedence when controls overlap</td></tr>
+  </table>
+
+  <h3>The Draw Lifecycle</h3>
+
+<div class="flow">UIManager.Update()
+  └── foreach Gump → gump.Update()
+       └── foreach child → child.Update()
+
+UIManager.PreDraw()
+  └── foreach Gump → gump.PreDraw()    // layout recalculation (ScrollArea uses this)
+
+UIManager.Draw(batcher)
+  └── foreach Gump (Last → First)
+       └── gump.Draw(batcher, x, y)
+            └── foreach child (0 → n)
+                 └── child.Draw(batcher, x + child.X, y + child.Y)</div>
+
+  <h3>Virtual Methods to Override</h3>
+
+  <table>
+    <tr><th>Method</th><th>When called</th></tr>
+    <tr><td><code>Draw(batcher, x, y)</code></td><td>Every frame when visible. Base implementation draws all children. Override to add custom rendering before/after calling base.</td></tr>
+    <tr><td><code>Update()</code></td><td>Every frame. Base calls children. Use for animation, state polling.</td></tr>
+    <tr><td><code>PreDraw()</code></td><td>After Update, before Draw. Use for layout calculations that affect draw (ScrollArea recalculates scrollbar max here).</td></tr>
+    <tr><td><code>Contains(x, y)</code></td><td>Hit-test: is screen point inside this control? Base checks bounds rectangle.</td></tr>
+    <tr><td><code>Dispose()</code></td><td>Cleanup. Sets <code>IsDisposed = true</code>, disposes children.</td></tr>
+    <tr><td><code>AlphaChanged(old, new)</code></td><td>Called when <code>Alpha</code> property changes. Override to update cached hue vectors.</td></tr>
+  </table>
+
+  <!-- ═══════════════════════════════════════════════════════ GUMP BASE -->
+  <h2 id="gump">Gump — The Window Base Class</h2>
+
+  <p><code>Gump : Control</code> is the base for every top-level UI window. It adds server/local serial association, save/restore functionality, lock behavior, and alpha-scroll support.</p>
+
+  <h3>Serial Scheme</h3>
+
+  <table>
+    <tr><th>Serial</th><th>Purpose</th></tr>
+    <tr><td><code>LocalSerial</code></td><td>Client-assigned ID. For client-created gumps, often 0 or a made-up constant. For item-bound gumps, the item serial.</td></tr>
+    <tr><td><code>ServerSerial</code></td><td>The server's ID for this gump dialog. Packet-created gumps set this from the server's gump serial.</td></tr>
+    <tr><td><code>IsFromServer</code></td><td>Flag indicating the gump was created by a server packet (generic gump). Server gumps can be closed by server command.</td></tr>
+  </table>
+
+  <h3>GumpType and Persistence</h3>
+
+  <p>Each concrete gump subclass declares its <code>GumpType</code> enum value. When the game session is saved (logout), <code>UIManager</code> iterates all gumps that have <code>CanBeSaved = true</code> and calls <code>Save(XmlTextWriter)</code>:</p>
+
+  <pre><code><span class="kw">public virtual void</span> <span class="fn">Save</span>(<span class="ty">XmlTextWriter</span> writer)
+{
+    writer.<span class="fn">WriteAttributeString</span>(<span class="st">"type"</span>, ((int)GumpType).<span class="fn">ToString</span>());
+    writer.<span class="fn">WriteAttributeString</span>(<span class="st">"x"</span>, X.<span class="fn">ToString</span>());
+    writer.<span class="fn">WriteAttributeString</span>(<span class="st">"y"</span>, Y.<span class="fn">ToString</span>());
+    writer.<span class="fn">WriteAttributeString</span>(<span class="st">"serial"</span>, LocalSerial.<span class="fn">ToString</span>());
+    writer.<span class="fn">WriteAttributeString</span>(<span class="st">"isLocked"</span>, isLocked.<span class="fn">ToString</span>());
+    writer.<span class="fn">WriteAttributeString</span>(<span class="st">"alphaOffset"</span>, AlphaOffset.<span class="fn">ToString</span>());
+}</code></pre>
+
+  <p>On next login, <code>Restore(XmlElement)</code> is called with the saved XML to reapply position, lock state, and alpha. Gumps that should <em>not</em> be saved (transient dialogs, tooltips) override <code>ShouldBeSaved => false</code>.</p>
+
+  <h3>Lock / Unlock</h3>
+
+  <p>Ctrl+Alt+Click (or left trigger on controller) on any gump toggles its lock state. When locked:
+  <code>CanMove = false</code>, <code>CanCloseWithRightClick = false</code>. The gump is visually immovable and protected from accidental closure.</p>
+
+  <h3>Alpha Scrolling</h3>
+
+  <p>Alt+ScrollWheel on any gump adjusts <code>Alpha</code> for the gump and all children by ±0.02, clamped to [0.1, 1.0]. This lets players make windows transparent. The <code>AlphaOffset</code> field stores the cumulative offset so it can be restored across sessions.</p>
+
+  <h3>InvalidateContents Pattern</h3>
+
+  <p>Heavy gumps (status bars, durability panels) use a deferred-rebuild pattern:</p>
+
+  <pre><code><span class="cm">// Signal "I need to rebuild my content on the next Update()"</span>
+gump.<span class="fn">RequestUpdateContents</span>();   <span class="cm">// sets InvalidateContents = true</span>
+
+<span class="cm">// Gump.Update() calls this when InvalidateContents is true</span>
+<span class="kw">protected virtual void</span> <span class="fn">UpdateContents</span>() { }   <span class="cm">// override to rebuild children</span></code></pre>
+
+  <!-- ═══════════════════════════════════════════════════════ CONTROLS CATALOG -->
+  <h2 id="controls-catalog">Controls Catalog</h2>
+
+  <p>The <code>Game/UI/Controls/</code> directory contains 60+ control types. The most commonly used are:</p>
+
+  <table>
+    <tr><th>Control</th><th>File</th><th>Purpose</th></tr>
+    <tr><td><code>Button</code></td><td><code>Button.cs</code></td><td>Gump-art button with normal/pressed/hover states</td></tr>
+    <tr><td><code>NiceButton</code></td><td><code>NiceButton.cs</code></td><td>Text-only button with colored background; TazUO addition</td></tr>
+    <tr><td><code>Label</code></td><td><code>Label.cs</code></td><td>Static text with UO font/hue; auto-sizes to text</td></tr>
+    <tr><td><code>HtmlControl</code></td><td><code>HtmlControl.cs</code></td><td>Text with UO HTML markup (<code>&lt;a&gt;</code>, <code>&lt;basefont&gt;</code>, etc.)</td></tr>
+    <tr><td><code>StbTextBox</code></td><td><code>StbTextBox.cs</code></td><td>Editable text field using STB text editing library</td></tr>
+    <tr><td><code>TTFTextInputField</code></td><td><code>TTFTextInputField.cs</code></td><td>Text field using TTF font rendering</td></tr>
+    <tr><td><code>InputField</code></td><td><code>InputField.cs</code></td><td>Wrapper combining a background + StbTextBox</td></tr>
+    <tr><td><code>GumpPic</code></td><td><code>GumpPic.cs</code></td><td>Single gump art image; pixel-perfect hit-testing</td></tr>
+    <tr><td><code>GumpPicTiled</code></td><td><code>GumpPicTiled.cs</code></td><td>Tiled gump art fill</td></tr>
+    <tr><td><code>ResizePic</code></td><td><code>ResizePic.cs</code></td><td>9-slice scalable gump background</td></tr>
+    <tr><td><code>NineSliceControl</code></td><td><code>NineSliceControl.cs</code></td><td>Modern equivalent of ResizePic with pixel-art scaling</td></tr>
+    <tr><td><code>AlphaBlendControl</code></td><td><code>AlphaBlendControl.cs</code></td><td>Solid-color semi-transparent rectangle; standard gump background</td></tr>
+    <tr><td><code>ScrollArea</code></td><td><code>ScrollArea.cs</code></td><td>Scrollable viewport with classic UO scrollbar or scroll flag</td></tr>
+    <tr><td><code>ModernScrollArea</code></td><td><code>ModernScrollArea.cs</code></td><td>Scrollable viewport with a flat modern scrollbar; TazUO addition</td></tr>
+    <tr><td><code>HSliderBar</code></td><td><code>HSliderBar.cs</code></td><td>Horizontal slider for numeric values</td></tr>
+    <tr><td><code>Checkbox</code></td><td><code>Checkbox.cs</code></td><td>On/off toggle with UO gump art</td></tr>
+    <tr><td><code>RadioButton</code></td><td><code>RadioButton.cs</code></td><td>Mutually exclusive toggle group</td></tr>
+    <tr><td><code>Combobox</code></td><td><code>Combobox.cs</code></td><td>Drop-down selector</td></tr>
+    <tr><td><code>ItemGump</code></td><td><code>ItemGump.cs</code></td><td>Draggable item-art control (used in containers)</td></tr>
+    <tr><td><code>DataBox</code></td><td><code>DataBox.cs</code></td><td>Invisible layout container; groups children for clipping</td></tr>
+    <tr><td><code>HitBox</code></td><td><code>HitBox.cs</code></td><td>Invisible click-region; fires OnMouseClick without rendering anything</td></tr>
+    <tr><td><code>VBoxContainer</code> / <code>HBoxContainer</code></td><td></td><td>Vertical / horizontal auto-layout containers</td></tr>
+    <tr><td><code>TableContainer</code></td><td><code>TableContainer.cs</code></td><td>Grid layout container</td></tr>
+    <tr><td><code>ContextMenuControl</code></td><td><code>ContextMenuControl.cs</code></td><td>Right-click context menu popup</td></tr>
+    <tr><td><code>ColorPickerBox</code></td><td><code>ColorPickerBox.cs</code></td><td>UO hue picker grid</td></tr>
+    <tr><td><code>AnimationDisplay</code></td><td><code>AnimationDisplay.cs</code></td><td>Renders a UO mobile animation in a control area</td></tr>
+    <tr><td><code>SimpleProgressBar</code></td><td><code>SimpleProgressBar.cs</code></td><td>Horizontal fill bar with percentage</td></tr>
+  </table>
+
+  <!-- ═══════════════════════════════════════════════════════ BUTTON -->
+  <h2 id="button">Button</h2>
+
+  <p><code>Button</code> renders three UO gump art images: <code>_normal</code> (default), <code>_pressed</code> (mouse down), <code>_over</code> (mouse hover). Size is inferred from the normal image at construction time.</p>
+
+  <pre><code><span class="kw">new</span> <span class="ty">Button</span>(
+    buttonID:  <span class="nu">0</span>,       <span class="cm">// ID sent to server (ButtonAction.Activate) or page switch number</span>
+    normal:    <span class="nu">0x0481</span>,  <span class="cm">// gumpart ID for default state</span>
+    pressed:   <span class="nu">0x0482</span>,  <span class="cm">// gumpart ID when held down</span>
+    over:      <span class="nu">0x0483</span>,  <span class="cm">// gumpart ID when hovered (0 = same as normal)</span>
+    caption:   <span class="st">"OK"</span>,   <span class="cm">// optional text overlay</span>
+    normalHue: <span class="nu">0x7FFF</span>  <span class="cm">// caption hue (ushort.MaxValue = no caption)</span>
+)
+{
+    ButtonAction = <span class="ty">ButtonAction</span>.Activate, <span class="cm">// Activate=fire click; SwitchPage=change gump page</span>
+    X = <span class="nu">100</span>, Y = <span class="nu">50</span>
+}</code></pre>
+
+  <table>
+    <tr><th>Property</th><th>Meaning</th></tr>
+    <tr><td><code>ButtonID</code></td><td>Passed to server on click (GenericGump response) or used as page number</td></tr>
+    <tr><td><code>ButtonAction</code></td><td><code>Activate</code> = fire click event; <code>SwitchPage</code> = change parent's <code>ActivePage</code></td></tr>
+    <tr><td><code>FontHue</code> / <code>HueHover</code></td><td>Caption color in normal / hover states</td></tr>
+  </table>
+
+  <div class="callout info">
+    <strong>GumpPicBase.Contains() — pixel-perfect hit testing</strong>
+    Hit testing for gump-art images checks <code>GumpartLoader.PixelCheck()</code> against the actual pixel data, not just the bounding rectangle. Transparent pixels in the art do not register clicks. This is how the irregular-shaped UO art buttons work correctly.
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ LABEL -->
+  <h2 id="label">Label</h2>
+
+  <p><code>Label</code> wraps <code>RenderedText</code>, which pre-renders text into a texture on creation. Size is automatically set to the rendered text dimensions.</p>
+
+  <pre><code><span class="kw">new</span> <span class="ty">Label</span>(
+    text:      <span class="st">"Hello World"</span>,
+    isunicode: <span class="kw">true</span>,   <span class="cm">// true = Unicode font; false = legacy ASCII font</span>
+    hue:       <span class="nu">0x0481</span>,
+    maxwidth:  <span class="nu">200</span>,    <span class="cm">// 0 = unlimited; wraps at maxwidth pixels</span>
+    font:      <span class="nu">0xFF</span>,   <span class="cm">// 0xFF = use default font</span>
+    style:     FontStyle.BlackBorder,
+    align:     TEXT_ALIGN_TYPE.TS_LEFT,
+    ishtml:    <span class="kw">false</span>
+)</code></pre>
+
+  <p>Setting the <code>Text</code> property recreates the texture. Changing <code>Hue</code> also recreates via <code>CreateTexture()</code>. This is O(n) in text length so avoid updating labels every frame — only update when the value changes.</p>
+
+  <p>The second <code>Label</code> constructor (taking <code>parts, lines</code>) is used by the server gump packet parser to create labels from server-sent data.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ TEXTBOX -->
+  <h2 id="textbox">Text Input Controls</h2>
+
+  <p>TazUO provides two text input systems:</p>
+
+  <table>
+    <tr><th>Control</th><th>Rendering</th><th>Use case</th></tr>
+    <tr><td><code>StbTextBox</code></td><td>UO legacy font</td><td>Server gumps, legacy input fields</td></tr>
+    <tr><td><code>TTFTextInputField</code></td><td>TrueType font (FontStashSharp)</td><td>TazUO modern UI elements, script editor</td></tr>
+    <tr><td><code>InputField</code></td><td>Wraps <code>StbTextBox</code></td><td>Named field with background decoration</td></tr>
+    <tr><td><code>TextBox</code></td><td>Wraps <code>StbTextBox</code></td><td>Multiline text display</td></tr>
+  </table>
+
+  <p><code>StbTextBox</code> uses the <code>StbTextEditSharp</code> library for text editing (cursor, selection, undo). The <code>TextBox.cs</code> wrapper adds scrolling for multiline content.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ SCROLLAREA -->
+  <h2 id="scrollarea">ScrollArea</h2>
+
+  <p><code>ScrollArea</code> is a clipped viewport with a scrollbar. Content is added as children; the scroll bar moves the content offset. The maximum scroll value is recalculated in <code>PreDraw()</code> from the total height of all children.</p>
+
+  <pre><code><span class="kw">var</span> area = <span class="kw">new</span> <span class="ty">ScrollArea</span>(x: <span class="nu">10</span>, y: <span class="nu">10</span>, w: <span class="nu">200</span>, h: <span class="nu">400</span>,
+    normalScrollbar: <span class="kw">true</span>  <span class="cm">// true=classic UO scroll bar; false=scroll flag icon</span>
+) { Parent = myGump };
+
+<span class="kw">new</span> <span class="ty">Label</span>(<span class="st">"Item 1"</span>, ...) { Parent = area };
+<span class="kw">new</span> <span class="ty">Label</span>(<span class="st">"Item 2"</span>, ...) { Parent = area };</code></pre>
+
+  <table>
+    <tr><th>Property</th><th>Meaning</th></tr>
+    <tr><td><code>ScrollValue</code></td><td>Current scroll offset in pixels</td></tr>
+    <tr><td><code>ScrollbarBehaviour</code></td><td><code>ShowWhenDataExceedFromView</code> (auto-hide) or <code>ShowAlways</code></td></tr>
+    <tr><td><code>ScissorRectangle</code></td><td>Custom clipping rect; defaults to the control bounds</td></tr>
+  </table>
+
+  <p><code>ModernScrollArea</code> (TazUO addition) uses a flat <code>ModernScrollBar</code> instead of the classic UO scroll graphics and provides smoother scrolling behavior.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ GUMPPIC -->
+  <h2 id="gumppic">GumpPic</h2>
+
+  <p><code>GumpPic</code> extends <code>GumpPicBase</code> to render a single gump art image. Setting <code>Graphic</code> automatically looks up the image from <code>GumpartLoader</code> and sizes the control to match.</p>
+
+  <pre><code><span class="kw">new</span> <span class="ty">GumpPic</span>(x: <span class="nu">0</span>, y: <span class="nu">0</span>, graphic: <span class="nu">0x082C</span>, hue: <span class="nu">0</span>) { Parent = myGump };
+<span class="cm">// Width/Height auto-set from gump art dimensions</span></code></pre>
+
+  <p><strong>Key variant — <code>EmbeddedGumpPic</code></strong>: accepts a raw <code>Texture2D</code> instead of a gump art ID; used for custom textures loaded from embedded resources.</p>
+
+  <p><strong>Pixel-perfect hit testing</strong>: <code>GumpPicBase.Contains()</code> delegates to <code>GumpartLoader.PixelCheck()</code>. Transparent pixels do not register mouse-over/click events, which is essential for the non-rectangular UO art shapes.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ ALPHABLEND -->
+  <h2 id="alphablend">AlphaBlendControl</h2>
+
+  <p><code>AlphaBlendControl</code> is a simple semi-transparent solid-color rectangle. It is the standard background for TazUO modern gumps:</p>
+
+  <pre><code><span class="kw">new</span> <span class="ty">AlphaBlendControl</span>(alpha: <span class="nu">0.7f</span>)
+{
+    X = <span class="nu">0</span>, Y = <span class="nu">0</span>,
+    Width = <span class="nu">300</span>, Height = <span class="nu">200</span>,
+    Hue = <span class="nu">0</span>,
+    BaseColor = Color.Black,  <span class="cm">// background color before alpha blend</span>
+    Parent = myGump
+};</code></pre>
+
+  <p>The hue vector is cached in <code>hueVector</code> and rebuilt whenever <code>Hue</code> or <code>Alpha</code> changes via <code>AlphaChanged()</code>. This avoids recomputing on every draw call.</p>
+
+  <!-- ═══════════════════════════════════════════════════════ IMGUI -->
+  <h2 id="imgui">ImGui Overlay System <span class="badge imgui">ImGui</span></h2>
+
+  <p>TazUO includes an ImGui layer for developer and power-user windows. ImGui renders entirely separately from the legacy control system — it draws after the game world and legacy UI, appearing on top of everything.</p>
+
+  <h3>ImGuiWindow Base Class</h3>
+
+  <pre><code><span class="kw">public abstract class</span> <span class="ty">ImGuiWindow</span> : IDisposable
+{
+    <span class="kw">public abstract void</span> <span class="fn">DrawContent</span>();  <span class="cm">// override to build the window</span>
+
+    <span class="kw">public void</span> <span class="fn">Draw</span>()   <span class="cm">// called every frame by the ImGui render loop</span>
+    {
+        <span class="kw">if</span> (!_isVisible || !_isOpen) <span class="kw">return</span>;
+        <span class="kw">if</span> (ImGui.<span class="fn">Begin</span>(Title, <span class="kw">ref</span> _isOpen, _windowFlags))
+            <span class="fn">DrawContent</span>();   <span class="cm">// immediate-mode: build all widgets here</span>
+        ImGui.<span class="fn">End</span>();
+        <span class="kw">if</span> (rightclickClose) <span class="fn">Dispose</span>();
+    }
+}</code></pre>
+
+  <h3>Available ImGui Windows</h3>
+
+  <table>
+    <tr><th>Window</th><th>File</th><th>Purpose</th></tr>
+    <tr><td><code>ScriptManagerWindow</code></td><td><code>ScriptManagerWindow.cs</code></td><td>Lists, runs, and stops IronPython scripts</td></tr>
+    <tr><td><code>RunningScriptsWindow</code></td><td><code>RunningScriptsWindow.cs</code></td><td>Shows currently executing scripts with stop buttons</td></tr>
+    <tr><td><code>AssistantWindow</code></td><td><code>AssistantWindow.cs</code></td><td>Main TazUO assistant menu hub</td></tr>
+    <tr><td><code>ImGuiThemeEditorWindow</code></td><td><code>ImGuiThemeEditorWindow.cs</code></td><td>Live ImGui color theme editor</td></tr>
+    <tr><td><code>PersistentVarsWindow</code></td><td><code>PersistentVarsWindow.cs</code></td><td>Displays Python script persistent variable storage</td></tr>
+    <tr><td><code>TestWindow</code></td><td><code>TestWindow.cs</code></td><td>Development sandbox</td></tr>
+  </table>
+
+  <h3>ImGUIComponents — Shared Widgets</h3>
+
+  <p><code>ImGUIComponents.cs</code> provides reusable ImGui widget wrappers used across multiple windows: colored buttons, tooltips, checkbox groups, input fields with validation, etc.</p>
+
+  <h3>Coexistence with Legacy UI</h3>
+
+  <div class="callout info">
+    <strong>Two separate renders</strong>
+    ImGui and the legacy control system are entirely independent. ImGui windows do <em>not</em> participate in the legacy hit-test system, cannot be anchored to other gumps, and do not use <code>UIManager.Add()</code>. They live in a separate list managed by <code>GameScene</code> and are drawn after <code>UIManager.Draw()</code>.
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ EVENTS -->
+  <h2 id="events">Event System</h2>
+
+  <p>Controls receive events through overridable protected methods. UIManager routes SDL events from the mouse/keyboard statics through to controls:</p>
+
+  <table>
+    <tr><th>Override</th><th>Triggered when</th></tr>
+    <tr><td><code>OnMouseDown(x, y, button)</code></td><td>Mouse button pressed while over this control</td></tr>
+    <tr><td><code>OnMouseUp(x, y, button)</code></td><td>Mouse button released</td></tr>
+    <tr><td><code>OnMouseClick(x, y, button)</code></td><td>Complete press+release without dragging</td></tr>
+    <tr><td><code>OnMouseDoubleClick(x, y, button)</code></td><td>Double-click</td></tr>
+    <tr><td><code>OnMouseWheel(delta)</code></td><td>Scroll wheel</td></tr>
+    <tr><td><code>OnMouseEnter()</code></td><td>Mouse entered control bounds</td></tr>
+    <tr><td><code>OnMouseExit()</code></td><td>Mouse left control bounds</td></tr>
+    <tr><td><code>OnKeyDown(sdlKey, mod)</code></td><td>Key pressed (only if this has keyboard focus)</td></tr>
+    <tr><td><code>OnKeyUp(sdlKey, mod)</code></td><td>Key released</td></tr>
+    <tr><td><code>OnTextInput(text)</code></td><td>Text input event (Unicode text)</td></tr>
+    <tr><td><code>OnFocusEnter()</code></td><td>Control gained keyboard focus</td></tr>
+    <tr><td><code>OnFocusLost()</code></td><td>Control lost keyboard focus</td></tr>
+    <tr><td><code>OnDragBegin(x, y)</code></td><td>Drag started</td></tr>
+    <tr><td><code>OnDragEnd(x, y)</code></td><td>Drag ended (Gump snaps to screen bounds here)</td></tr>
+    <tr><td><code>OnMove(x, y)</code></td><td>Position changed during drag</td></tr>
+  </table>
+
+  <h3>Wiring Event Handlers Externally</h3>
+
+  <p>Controls expose <code>MouseClick</code>, <code>MouseDoubleClick</code>, etc. as public <code>Action</code> delegates (not C# events). These can be set directly:</p>
+
+  <pre><code><span class="kw">var</span> btn = <span class="kw">new</span> <span class="ty">NiceButton</span>(<span class="nu">0</span>, <span class="nu">0</span>, <span class="nu">120</span>, <span class="nu">30</span>, <span class="ty">ButtonAction</span>.Activate, <span class="st">"Click Me"</span>);
+btn.MouseUp += (<span class="ty">sender</span>, e) =>
+{
+    <span class="kw">if</span> (e.Button == <span class="ty">MouseButtonType</span>.Left)
+        <span class="ty">GameActions</span>.<span class="fn">Print</span>(<span class="st">"Clicked!"</span>);
+};</code></pre>
+
+  <!-- ═══════════════════════════════════════════════════════ NEW GUMP -->
+  <h2 id="new-gump">Pattern: Adding a New Feature Gump</h2>
+
+  <p>Here is the minimal pattern for a new client-created gump window:</p>
+
+  <pre><code><span class="kw">public class</span> <span class="ty">MyFeatureGump</span> : <span class="ty">Gump</span>
+{
+    <span class="kw">public</span> <span class="ty">MyFeatureGump</span>(<span class="ty">World</span> world) : <span class="kw">base</span>(world, localSerial: <span class="nu">0</span>, serverSerial: <span class="nu">0</span>)
+    {
+        <span class="cm">// CanMove lets the player drag the window</span>
+        CanMove = <span class="kw">true</span>;
+        CanCloseWithRightClick = <span class="kw">true</span>;
+
+        <span class="cm">// Build the layout</span>
+        Width = <span class="nu">300</span>; Height = <span class="nu">200</span>;
+
+        <span class="cm">// Background</span>
+        <span class="kw">new</span> <span class="ty">AlphaBlendControl</span>(<span class="nu">0.7f</span>) { X=<span class="nu">0</span>, Y=<span class="nu">0</span>, Width=Width, Height=Height, Parent=<span class="kw">this</span> };
+
+        <span class="cm">// Content</span>
+        <span class="kw">new</span> <span class="ty">Label</span>(<span class="st">"My Feature"</span>, <span class="kw">true</span>, <span class="nu">0x07FF</span>) { X=<span class="nu">10</span>, Y=<span class="nu">10</span>, Parent=<span class="kw">this</span> };
+
+        <span class="cm">// Close button</span>
+        <span class="kw">var</span> close = <span class="kw">new</span> <span class="ty">NiceButton</span>(<span class="nu">10</span>, <span class="nu">170</span>, <span class="nu">80</span>, <span class="nu">20</span>, <span class="ty">ButtonAction</span>.Activate, <span class="st">"Close"</span>)
+            { Parent = <span class="kw">this</span> };
+        close.MouseUp += (_, _) => <span class="fn">Dispose</span>();
+    }
+
+    <span class="cm">// Register a GumpType so the position is saved across sessions</span>
+    <span class="kw">public override</span> <span class="ty">GumpType</span> GumpType => <span class="ty">GumpType</span>.MyFeature; <span class="cm">// add to enum</span>
+}</code></pre>
+
+  <h3>Showing the Gump</h3>
+
+  <pre><code><span class="cm">// From anywhere that has a World reference:</span>
+<span class="ty">UIManager</span>.<span class="fn">GetGump</span>&lt;<span class="ty">MyFeatureGump</span>&gt;()?.Dispose(); <span class="cm">// close any existing instance</span>
+<span class="ty">UIManager</span>.<span class="fn">Add</span>(<span class="kw">new</span> <span class="ty">MyFeatureGump</span>(world));</code></pre>
+
+  <h3>Checklist for New Gumps</h3>
+
+  <ol>
+    <li>Add the class to <code>Game/UI/Gumps/</code></li>
+    <li>Add its <code>GumpType</code> value to the <code>GumpType</code> enum (in <code>GumpType.cs</code>)</li>
+    <li>Register it in the gump restore switch in <code>GameScene</code> (the block that maps enum → new Gump() on login)</li>
+    <li>Override <code>Save()</code> and <code>Restore()</code> if the gump has state beyond position and alpha</li>
+    <li>Set <code>ShouldBeSaved = false</code> if the gump is transient and should not persist across sessions</li>
+  </ol>
+
+  <!-- ═══════════════════════════════════════════════════════ FORWARD -->
+  <h2 id="forward">Going Forward</h2>
+
+  <table>
+    <tr><th>Do</th><th>Don't</th></tr>
+    <tr><td>Use <code>AlphaBlendControl</code> for modern gump backgrounds</td><td>Draw a raw background in <code>Draw()</code> — use a child control instead</td></tr>
+    <tr><td>Set <code>CanMove = true</code> on top-level gumps players should drag</td><td>Forget <code>CanMove</code> — immovable gumps frustrate players</td></tr>
+    <tr><td>Use <code>RequestUpdateContents()</code> for deferred rebuilds</td><td>Rebuild children every frame in <code>Update()</code></td></tr>
+    <tr><td>Override <code>OnMouseClick</code> for button behavior in custom controls</td><td>Poll <code>Mouse.Position</code> directly in controls</td></tr>
+    <tr><td>Register a <code>GumpType</code> so position is saved</td><td>Leave <code>GumpType = GumpType.None</code> for persistent windows</td></tr>
+    <tr><td>Check <code>UIManager.GetGump&lt;T&gt;()</code> before adding a second instance</td><td>Allow duplicate gump instances to stack on screen</td></tr>
+    <tr><td>Use <code>NiceButton</code> for TazUO modern UI buttons</td><td>Create raw <code>Button</code> controls that need gumpart IDs to exist</td></tr>
+    <tr><td>Use ImGui for developer/debug windows</td><td>Use ImGui for standard gameplay UI — it doesn't integrate with the server gump system</td></tr>
+  </table>
+
+  <div class="nav-page-links">
+    <a href="06-managers-tazuo.html">← 06: TazUO Managers</a>
+    <a href="index.html">↑ Index</a>
+    <a href="08-ui-gumps.html">08: UI Gumps →</a>
+  </div>
+</main>
+
+</body>
+</html>

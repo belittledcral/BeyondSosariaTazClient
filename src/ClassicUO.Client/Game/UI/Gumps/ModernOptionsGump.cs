@@ -73,6 +73,7 @@ namespace ClassicUO.Game.UI.Gumps
             MainContent.AddToLeft(CategoryButton(lang.ButtonNameplates, (int)PAGE.NameplateOptions, MainContent.LeftWidth));
             MainContent.AddToLeft(CategoryButton(lang.ButtonCooldowns, (int)PAGE.TUOCooldowns, MainContent.LeftWidth));
             MainContent.AddToLeft(CategoryButton(lang.ButtonTazUO, (int)PAGE.TUOOptions, MainContent.LeftWidth));
+            MainContent.AddToLeft(CategoryButton(lang.ButtonPlugins, (int)PAGE.Plugins, MainContent.LeftWidth));
 
             BuildGeneral();
             BuildSound();
@@ -88,6 +89,7 @@ namespace ClassicUO.Game.UI.Gumps
             BuildNameplates();
             BuildCooldowns();
             BuildTazUO();
+            BuildPlugins();
 
             foreach (SettingsOption option in options)
             {
@@ -4086,6 +4088,7 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     float scale = ((float)s.GetValue() / (float)100);
 
+                    profile.RenderScale = scale;
                     Client.Game.SetScale(scale);
                     _ = Client.Settings.SetAsync(SettingsScope.Global, Constants.SqlSettings.GAME_SCALE, scale);
                 }
@@ -4243,6 +4246,81 @@ namespace ClassicUO.Game.UI.Gumps
 
 
             options.Add(new SettingsOption("", content, MainContent.RightWidth, (int)PAGE.TUOOptions));
+        }
+
+        private void BuildPlugins()
+        {
+            SettingsOption s;
+            PositionHelper.Reset();
+
+            options.Add(
+                s = new SettingsOption(
+                    "",
+                    new Label("Helper plugins in Data/Plugins/ — changes take effect on restart.", true, 0xFFFF, MainContent.RightWidth - 10),
+                    MainContent.RightWidth,
+                    (int)PAGE.Plugins
+                )
+            );
+            PositionHelper.PositionControl(s.FullControl);
+            PositionHelper.BlankLine();
+
+            string pluginsDir = Path.Combine(CUOEnviroment.ExecutablePath, "Data", "Plugins");
+            string[] available = Directory.Exists(pluginsDir)
+                ? Directory.GetFiles(pluginsDir, "*.dll")
+                      .Select(Path.GetFileName)
+                      .OrderBy(n => n)
+                      .ToArray()
+                : Array.Empty<string>();
+
+            if (available.Length == 0)
+            {
+                options.Add(
+                    s = new SettingsOption(
+                        "",
+                        new Label("No plugins found in Data/Plugins/", true, 0xFFFF, MainContent.RightWidth - 10),
+                        MainContent.RightWidth,
+                        (int)PAGE.Plugins
+                    )
+                );
+                PositionHelper.PositionControl(s.FullControl);
+                return;
+            }
+
+            foreach (string dll in available)
+            {
+                string capture = dll;
+                bool isEnabled = Settings.GlobalSettings.Plugins.Any(
+                    p => string.Equals(p, capture, StringComparison.OrdinalIgnoreCase)
+                );
+
+                options.Add(
+                    s = new SettingsOption(
+                        "",
+                        new CheckboxWithLabel(capture, 0, isEnabled, (b) =>
+                        {
+                            if (b)
+                            {
+                                if (!Settings.GlobalSettings.Plugins.Any(p =>
+                                        string.Equals(p, capture, StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    Settings.GlobalSettings.Plugins =
+                                        Settings.GlobalSettings.Plugins.Append(capture).ToArray();
+                                }
+                            }
+                            else
+                            {
+                                Settings.GlobalSettings.Plugins = Settings.GlobalSettings.Plugins
+                                    .Where(p => !string.Equals(p, capture, StringComparison.OrdinalIgnoreCase))
+                                    .ToArray();
+                            }
+                            Settings.GlobalSettings.Save();
+                        }),
+                        MainContent.RightWidth,
+                        (int)PAGE.Plugins
+                    )
+                );
+                PositionHelper.PositionControl(s.FullControl);
+            }
         }
 
         public override void Dispose()
@@ -5553,7 +5631,8 @@ namespace ClassicUO.Game.UI.Gumps
             IgnoreList,
             NameplateOptions,
             TUOCooldowns,
-            TUOOptions
+            TUOOptions,
+            Plugins
         }
     }
 }
