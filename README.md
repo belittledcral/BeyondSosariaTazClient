@@ -5,7 +5,7 @@
 
 | Channel | Status |
 | --- | --- |
-| Release | [![Build](https://github.com/belittledcral/BeyondSosariaTazClient/actions/workflows/build-test.yml/badge.svg?branch=release/beyond-sosaria)](https://github.com/belittledcral/BeyondSosariaTazClient/actions/workflows/build-test.yml) |
+| Release | [![Build](https://github.com/belittledcral/BeyondSosariaTazClient/actions/workflows/build-test.yml/badge.svg?branch=main)](https://github.com/belittledcral/BeyondSosariaTazClient/actions/workflows/build-test.yml) |
 
 
 # Beyond Sosaria Client
