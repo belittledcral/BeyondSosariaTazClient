@@ -17,10 +17,9 @@ namespace ClassicUO.Configuration
         public MapLanguage MapLanguage { get; set; } = new MapLanguage();
         public TopBarGumpLanguage TopBarGump { get; set; } = new TopBarGumpLanguage();
 
-        public string TazuoVersionHistory { get; set; } = "TazUO Version History";
+        public string TazuoVersionHistory { get; set; } = "Beyond Sosaria \u2014 Client History";
         public string CurrentVersion { get; set; } = "Current Version: ";
-        public string TazUOWiki { get; set; } = "TazUO Wiki";
-        public string TazUODiscord { get; set; } = "TazUO Discord";
+        public string TazUOWiki { get; set; } = "Beyond Sosaria Website";
         public string CommandGump { get; set; } = "Available Client Commands";
 
         [JsonIgnore]

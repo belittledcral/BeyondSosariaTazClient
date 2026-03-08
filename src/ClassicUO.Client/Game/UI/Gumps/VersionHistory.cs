@@ -441,7 +441,7 @@ internal class VersionHistory : NineSliceGump
         """ +
         "\n",
 
-        "\n\n/c[white]For further history please visit our forums: forums.tazuo.org"
+        "\n\n/c[white]Base client built on TazUO. For more information visit beyondsosaria.com"
     ];
 
     private ScrollArea _scrollArea;
@@ -479,8 +479,7 @@ internal class VersionHistory : NineSliceGump
 
         Add(pos.Position(_scrollArea));
 
-        Add(pos.PositionExact(new HttpClickableLink(Language.Instance.TazUOWiki, "https://github.com/PlayTazUO/TazUO/wiki", Color.Orange, 15), 25, Height - 20));
-        Add(pos.PositionExact(new HttpClickableLink(Language.Instance.TazUODiscord, "https://discord.gg/QvqzkB95G4", Color.Orange, 15), Width - 110, Height - 20));
+        Add(pos.PositionExact(new HttpClickableLink(Language.Instance.TazUOWiki, "https://beyondsosaria.com/", Color.Orange, 15), 25, Height - 20));
     }
 
     protected override void OnResize(int oldWidth, int oldHeight, int newWidth, int newHeight)
