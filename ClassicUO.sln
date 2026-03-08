@@ -77,6 +77,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClassicUO.CUOAPI", "src\Cla
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventGenerator", "tools\EventGenerator\EventGenerator.csproj", "{7890E00E-353C-445F-B1C7-002D51B84034}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeyondSosariaLauncher", "src\BeyondSosariaLauncher\BeyondSosariaLauncher.csproj", "{B1D2E3F4-5678-90AB-CDEF-1234567890AB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -187,6 +189,14 @@ Global
 		{7890E00E-353C-445F-B1C7-002D51B84034}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7890E00E-353C-445F-B1C7-002D51B84034}.Release|x64.ActiveCfg = Release|Any CPU
 		{7890E00E-353C-445F-B1C7-002D51B84034}.Release|x64.Build.0 = Release|Any CPU
+		{B1D2E3F4-5678-90AB-CDEF-1234567890AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1D2E3F4-5678-90AB-CDEF-1234567890AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1D2E3F4-5678-90AB-CDEF-1234567890AB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B1D2E3F4-5678-90AB-CDEF-1234567890AB}.Debug|x64.Build.0 = Debug|Any CPU
+		{B1D2E3F4-5678-90AB-CDEF-1234567890AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1D2E3F4-5678-90AB-CDEF-1234567890AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1D2E3F4-5678-90AB-CDEF-1234567890AB}.Release|x64.ActiveCfg = Release|Any CPU
+		{B1D2E3F4-5678-90AB-CDEF-1234567890AB}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -207,6 +217,7 @@ Global
 		{83A3839A-3A9A-42DB-8293-17EFAF482F32} = {FA5D7AB8-3570-4E55-95B0-35BA6842FEE3}
 		{E0E5D8FF-A30F-4698-9106-83B6103D292C} = {8EAF9583-DC5B-46DC-A01E-47B00A1C862E}
 		{F1234567-890A-BCDE-F123-456789ABCDEF} = {8EAF9583-DC5B-46DC-A01E-47B00A1C862E}
+		{B1D2E3F4-5678-90AB-CDEF-1234567890AB} = {8EAF9583-DC5B-46DC-A01E-47B00A1C862E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0A99E91A-ADAB-45C3-8170-2656140F6EFA}

@@ -1576,10 +1576,11 @@ namespace ClassicUO.Game.Scenes
         {
             var vpCenter = new Vector2(vpW * 0.5f, vpH * 0.5f);
             Vector2 camOffset = Camera.Offset;
+            float scale = GetActiveScale();
             var rtCenter = new Vector2(rtW * 0.5f, rtH * 0.5f);
 
             Matrix.CreateTranslation(-vpCenter.X, -vpCenter.Y, 0f, out Matrix matTrans1);
-            Matrix.CreateTranslation(-camOffset.X, -camOffset.Y, 0f, out Matrix matTrans2);
+            Matrix.CreateTranslation(-camOffset.X * scale, -camOffset.Y * scale, 0f, out Matrix matTrans2);
             Matrix.CreateTranslation(rtCenter.X, rtCenter.Y, 0f, out Matrix matTrans3);
             Matrix.Multiply(ref matTrans1, ref matTrans2, out Matrix temp1);
             Matrix.Multiply(ref temp1, ref matTrans3, out _worldRtMatrix);
